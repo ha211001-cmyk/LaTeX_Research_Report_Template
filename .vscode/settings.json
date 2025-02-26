@@ -1,0 +1,48 @@
+{
+	"latex-workshop.latex.tools": [
+        {
+			"name": "latexmk",
+			"command": "latexmk",
+			"args": [
+                "-synctex=1",
+                "-pdfdvi",
+                "-interaction=nonstopmode",
+                "%DOC%"
+			]
+		},
+        {
+			"name": "clean",
+			"command": "latexmk",
+			"args": [
+				"-c",
+				"%DOC%"
+			]
+		},
+		{
+			"name": "clean dvi",
+			"command": "rm",
+			"args": [
+				"-f",
+				"%DOC%.dvi",
+				"%DOC%.bbl"
+			]
+		}
+	],
+	"latex-workshop.latex.recipes": [
+		{
+			"name": "latexmk",
+			"tools": [
+				"latexmk"
+			]
+		},
+		{
+			"name": "clean",
+			"tools": [
+				"clean",
+				"clean dvi"
+			]
+		}
+	],
+	"latex-workshop.view.pdf.viewer": "tab",
+	"latex-workshop.synctex.afterBuild.enabled": true
+}

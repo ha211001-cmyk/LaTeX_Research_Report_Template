@@ -1,0 +1,63 @@
+%-----------------ページ余白の設定---------------------
+\usepackage[top=1.5cm, bottom=1.0cm, left=1.4cm, right=1.4cm, includefoot]{geometry}
+%------------------パッケージ読み込み--------------------
+\usepackage{graphicx}			%図を入れる
+\usepackage{amsmath,amssymb,amsthm}				%数式align環境,数学記号,定義・定理・証明環境
+\allowdisplaybreaks % align環境の途中での改ページ許可
+\usepackage[subrefformat=parens,labelformat=parens]{subcaption}			%複数図をまとめる
+\usepackage{tabularray}
+\usepackage{url}
+% \usepackage{ascmac}				% 囲み
+% \usepackage{color}					%色付け
+% \usepackage{autonum} % 数式の番号管理
+% \usepackage{relsize} % 拡大縮小
+\usepackage{float} % 図の位置をその場に指定
+    % \restylefloat{figure}
+    % \restylefloat{table}
+\usepackage{wrapfig} % 図の回り込み
+% \usepackage{natbib} 
+% \usepackage[sectionbib]{chapterbib}
+% \usepackage{showkeys} % ラベル表示
+
+
+%-------------------コマンドの定義-------------------------
+\newcommand{\bm}{\boldsymbol}
+\newcommand{\del}{\partial}
+\newcommand{\diag}{\mathrm{diag}}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}%[section]
+\newtheorem{assumption}{Assumption}%[section]
+\newtheorem{theorem}{Theorem}%[section]
+\newtheorem{lemma}{Lemma}%[section]
+\newtheorem{corollary}{Corollary}%[section]
+\newtheorem{remark}{Remark}%[section]
+% \renewcommand{\proofname}{\textbf{証明}}
+
+% subcaptionの調整
+\captionsetup[subfigure]{labelformat=simple}
+\renewcommand{\thesubfigure}{(\alph{subfigure})}
+
+
+%-------------------ラベル表示の変更-----------------------------
+\date{\number\year/\number\month/\number\day}
+% \renewcommand{\figurename}{Fig.}
+% \renewcommand{\tablename}{Table}
+% \renewcommand{\refname}{References}
+% \bibliographystyle{sicetran}
+% \bibliographystyle{IEEEtran}
+%\renewcommand{\theenumi}{\alph{enumi}}
+
+\bibliographystyle{ssice}
+
+% タイトルのスタイル
+\makeatletter
+\renewcommand{\maketitle}{
+  \begin{center}
+    {\huge\bfseries\@title} \\
+    {\large{\@date}\quad{\@author}}
+    % \vspace{10pt}
+    \hrule
+  \end{center}
+}
+\makeatother

@@ -1,0 +1,172 @@
+\documentclass[platex,dvipdfmx,a4j,12pt,twocolumn]{jsarticle}
+\input{header}
+
+\title{報告書テンプレ}
+% \author{梅本 和希}
+% \date{2025/1/1}
+\date{\today}
+
+\begin{document}
+\twocolumn[\maketitle]
+
+\section{\LaTeX の概要}
+Microsoft Wordみたいなものです。テキストファイルでいろいろ書きます。習うより慣れよ。
+\begin{itemize}
+    \item 図や式の番号を自動管理してくれる (参照)
+    \item 参考文献リストが扱いやすい
+    \item 長い文章でも重くならない (Wordよりは)
+    \item ソフトが落ちない (ただの平文テキストファイルなので)
+    \item きれい
+    \item 図が画面外に消えていなくならない
+\end{itemize}
+などのメリットがありますが覚えることが多いのが難点。\textbf{ある程度網羅的なサンプルがあればコピペで作れるのでこのテンプレを全員で育てましょう。}
+
+\subsection{OverleafとCloudLatex}
+どちらもオンラインLatex環境ですが、Overleafは無料プランではコンパイル時間に制限があります。使い勝手はOverleafのほうが良い印象ですが、Cloud Latexはコンパイル時間に制限がない、VS CodeやGithubと連携できたりとメリットがあります。報告書であればOverleafが勝手が良いとは思いますが、どちらか一つしか使わないのであればCloud Latex推奨です。Overleafで使う場合にはlatexmkrcファイルと、左上メニューからコンパイラ: Latexの設定が必要です。どちらにしても新規プロジェクトからzipファイルのアップロードができます。
+
+\subsection{章と節、その他}
+章は\textbackslash section\{章タイトル\}、節は\textbackslash subsection\{節タイトル\}と書く。subsubsectionもある。
+基本的にテキストで書いた順番に並べられるが、図表は自動で配置を決定する。空白行を入れると段落が変わる。数式や図を入れるときに空白行を無駄に入れてしまうのに注意。
+逆に空白行さえ入れなければ段落は変わらず、改行もなく続けて表示される。バックスラッシュ2個で改行できるが、基本的に使わないほうがよい。
+\% でコメントアウトできる。
+
+\section{表と図}
+表は表\ref{tab:my_label}のように、
+\begin{table}[b]
+    \centering
+    \caption{Caption}
+    \begin{tblr}{
+      width = { 1.0\linewidth },
+      colspec = {X[1] X[1]}, % 比率指定
+      % colspec = {>{\centering}p{.1\linewidth} p{.8\linewidth}}, % 幅指定
+      % row{1} = { valign = h },
+      }
+      \hline
+      1 & 2 \\
+      あああ & いいい \\
+      \hline
+    \end{tblr}\label{tab:my_label}
+\end{table}
+図は図\ref{fig:my_figure}のように書く。
+\begin{figure}[b]
+    \centering
+    \includegraphics[width=0.5\linewidth]{fig/AngularVelocity.pdf}
+    \caption{キャプション}
+    \label{fig:my_figure}
+\end{figure}
+並べたい場合はminipageを使う (図\ref{fig:my_figure2}, \ref{fig:my_figure3})。バックスラッシュ2つで改行を入れて縦に並べることもできる。オプションHでtexファイルで書いた位置に画像を入れる。基本的にはt、b、tb (上か下) 推奨。配置にこだわってもうまくいかないことが多いので気にしないということも重要。
+\begin{figure}[b]
+  \begin{minipage}[b]{0.47\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{fig/AngularVelocity.pdf}
+    \caption{Caption}\label{fig:my_figure2}
+  \end{minipage}
+  \hspace{0.02\linewidth} % ここで隙間作成
+  \begin{minipage}[b]{0.47\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{fig/AngularVelocity.pdf}
+    \caption{Caption}\label{fig:my_figure3}
+  \end{minipage}
+\end{figure}
+\begin{figure}[b]
+  \begin{minipage}[b]{0.47\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{fig/AngularVelocity.pdf}
+    \subcaption{Caption}\label{fig:my_figure4-a}
+  \end{minipage}
+  \hspace{0.02\linewidth} % ここで隙間作成
+  \begin{minipage}[b]{0.47\linewidth}
+    \centering
+    \includegraphics[width=0.8\linewidth]{fig/AngularVelocity.pdf}
+    \subcaption{Caption}\label{fig:my_figure4-b}
+  \end{minipage}
+  \caption{キャプション}\label{fig:my_figure4}
+\end{figure}
+キャプションをまとめたいときはsubcaption (図\ref{fig:my_figure4}, \ref{fig:my_figure4-a})。
+2段組み中の1段組みは図\ref{fig:my_figure5}のようにfigure*環境を使う。
+\begin{figure*}[tb]
+    \centering
+    \includegraphics[width=0.2\linewidth]{fig/AngularVelocity.pdf}
+    \caption{キャプション}
+    \label{fig:my_figure5}
+\end{figure*}
+
+
+\section{数式}
+
+\subsection{数式環境}
+
+equation環境:
+\begin{equation}
+    y = f(x)
+\end{equation}
+align環境:
+\begin{align}
+    y_1 &= f_1(x_1,~x_2) \\
+    y_2 &= f_2(x_1,~x_2)
+\end{align}
+aligned環境:
+\begin{equation}
+    \begin{aligned}
+        y_1 &= f_1(x_1,~x_2) \\
+        y_2 &= f_2(x_1,~x_2)
+    \end{aligned}
+\end{equation}
+bmatrix環境:
+\begin{equation}
+    A = 
+    \begin{bmatrix}
+        a & b \\
+        c & d
+    \end{bmatrix}
+\end{equation}
+長い数式はfigure*環境の中にequation環境等を入れる。その際キャプションはつけない。
+\textbf{他はだれかが追記。}
+\url{https://qiita.com/t_kemmochi/items/a4c390b4967b13f3afb7}にいろいろ載っている。
+また、\url{https://www.ieice.org/iss/prmu/jpn/latex_templates/tecrep.pdf}には数式を枠に収めるテクニックがいろいろ記載。
+
+
+\subsection{数式コマンド}
+ギリシャ文字$\alpha,\beta$、等号不等号$\leq,\approx$、飾り$\bar{x},\tilde{x},\dot{x},\ddot{x}$等かなり数が多い。\textbf{表にだれかがまとめる。}
+\url{https://cns-guide.sfc.keio.ac.jp/2002/13/4/5.html}にいろいろ載っている。
+
+\section{参考文献}
+末尾に追加される。bibファイルで管理がしやすい。参照するときは\cite{Fujiwara1984}とする。bibファイルの作成にはzoteroやJabRef、mac OSならBibDeskなどを使うとよい。基本的にbibファイルを論文検索サイトからダウンロードしてきて1つのファイルにまとめていく。
+
+\section{その他}
+\begin{itemize}
+    \item latexdiff-vcを使うと差分を青や赤でマーキングできます。見やすい。
+    \item Gitで管理するといろいろとよい。過去に戻れるし、latexdiff-vcが使いやすくなる。
+\end{itemize}
+
+\section{報告書の章立て}
+研究報告は以下の構成で書くこと。
+\begin{enumerate}
+    \item 概要
+
+    報告の内容を簡潔にまとめる。
+
+    \item 研究計画
+    
+    しっかり研究計画を練ること。
+
+    \item 導入
+
+    以下の項目について書く。
+
+    \begin{itemize}
+        \item 動機付け: 研究の背景や意義は？
+        \item 関連研究: 既存研究の紹介と解決すべき課題は？
+        \item 目的: なにに取り組むのか？
+    \end{itemize}
+
+    \item 本題
+
+    適宜、章を分ける。
+
+    \item 結論
+    
+\end{enumerate}
+
+\bibliography{bibfile}
+\end{document}

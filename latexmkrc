@@ -1,8 +1,6 @@
-$latex = 'platex -synctex=1 -halt-on-error -interaction=nonstopmode -file-line-error -pdfdvi %O %S';
-$bibtex = 'pbibtex %O %S';
+$pdf_mode = 4;
+$engine = 'uplatex';
+$latex = 'uplatex %O %S -kanji=utf8';
+$bibtex = 'upbibtex';
 $dvipdf = 'dvipdfmx %O -o %D %S';
 $makeindex = 'mendex %O -o %D %S';
-
-$max_repeat = 5;
-$pdf_mode = 3;
- 

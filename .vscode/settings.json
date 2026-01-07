@@ -1,45 +1,27 @@
 {
-	"latex-workshop.latex.tools": [
+    "latex-workshop.latex.tools": [
         {
 			"name": "latexmk",
 			"command": "latexmk",
 			"args": [
-                "%DOC%"
-			]
-		},
-        {
-			"name": "clean",
-			"command": "latexmk",
-			"args": [
-				"-c",
+				"-pdfdvi",
+				"-synctex=1",
+				"-interaction=nonstopmode",
+				"-file-line-error",
 				"%DOC%"
 			]
-		},
-		{
-			"name": "clean dvi",
-			"command": "rm",
-			"args": [
-				"-f",
-				"%DOC%.dvi",
-				"%DOC%.bbl"
-			]
 		}
-	],
-	"latex-workshop.latex.recipes": [
+    ],
+    "latex-workshop.latex.recipes": [
 		{
 			"name": "latexmk",
-			"tools": [
-				"latexmk"
-			]
-		},
-		{
-			"name": "clean",
-			"tools": [
-				"clean",
-				"clean dvi"
-			]
+			"tools": ["latexmk"]
 		}
 	],
 	"latex-workshop.view.pdf.viewer": "tab",
-	"latex-workshop.synctex.afterBuild.enabled": true
+    "latex-workshop.latex.autoBuild.run": "never",
+    "latex-workshop.latex.autoBuild.cleanAndRetry.enabled": false,
+    "latex-workshop.latex.build.clearLog.everyRecipeStep.enabled": false,
+    "latex-workshop.latex.autoClean.run": "never",
+    "latex-workshop.latex.outDir": "./"
 }

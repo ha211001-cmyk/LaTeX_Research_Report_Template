@@ -1,4 +1,4 @@
-$pdf_mode = 4;
+$pdf_mode = 3;
 $engine = 'uplatex';
 $latex = 'uplatex %O %S -kanji=utf8';
 $bibtex = 'upbibtex';

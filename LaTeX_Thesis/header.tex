@@ -1,0 +1,312 @@
+%==============================================================================
+% 卒業論文LaTeXテンプレート - ヘッダーファイル
+% 
+% このファイルには、卒論本文で使用する各種設定とコマンド定義が含まれています。
+% main.tex から \input{header} で読み込まれます。
+%==============================================================================
+
+%-----------------ページ余白の設定-----------------------------------------
+% デフォルト設定（ヘッダーありのページ用）
+\usepackage[top=30mm, bottom=25mm, left=20mm, right=20mm, headheight=17pt, headsep=10mm]{geometry}
+
+% ヘッダーなしページ用の余白設定コマンド
+% 使用例: \noheadergeometry → 目次ページなど → \normalgeometry で元に戻す
+\newcommand{\noheadergeometry}{\newgeometry{top=40mm, bottom=25mm, left=20mm, right=20mm}}
+\newcommand{\normalgeometry}{\restoregeometry}
+
+%-----------------フォント設定-------------------------------------------------
+% Times New Roman (欧文), 明朝体 (和文) - pLaTeX用
+\usepackage{newtxtext}           % 欧文フォントをTimes New Romanに設定
+\usepackage[amsthm]{newtxmath}   % 数式フォントもTimesに統一（定理環境対応）
+
+% 本文を細字に設定（オプション：大学の規定に応じて調整）
+% 注意: 以下をコメントアウトすると、フォント警告が消えます（標準の太さになります）
+% \renewcommand{\seriesdefault}{l}        % light weight (細字)
+% \AtBeginDocument{\fontseries{l}\selectfont}  % 明示的に細字を適用
+%-----------------パッケージ読み込み-------------------------------------------
+
+% 図表のキャプション設定
+\usepackage{caption}
+\captionsetup[figure]{
+  labelfont=bf,         % ラベル（「図1」部分）を太字
+  textfont=normalfont,  % 説明文は通常フォント
+  labelsep=colon,       % ラベルと説明文の区切りはコロン「:」
+  name=図               % 日本語で「図」と表示
+}
+\captionsetup[table]{
+  labelfont=bf,
+  textfont=normalfont,
+  labelsep=colon,
+  name=表               % 日本語で「表」と表示
+}
+\usepackage{chngcntr}
+\counterwithin{table}{section}
+\AtBeginDocument{  % セクション名から「第○章」を除外
+  \renewcommand{\thetable}{\arabic{section}.\arabic{table}}
+  \renewcommand{\thefigure}{\arabic{section}.\arabic{figure}}
+}
+% 画像・図表関連
+\usepackage{graphicx}   % 画像の挿入 (\includegraphics)
+\usepackage{float}      % 図表の位置を [H] で強制指定可能に
+\usepackage{wrapfig}    % 文章の回り込み図
+
+% 図をTikZで描くため
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,shapes.geometric,calc,positioning}
+
+
+% 数式関連
+\usepackage{amsmath,amsthm}  % 数式環境 (align, equation等) と定理環境
+\allowdisplaybreaks          % align環境内での改ページを許可
+
+% 数式番号を (章.式) 形式で括弧付きにカスタマイズ
+\renewcommand{\theequation}{\thesection.\arabic{equation}}
+\makeatletter
+\renewcommand{\eqref}[1]{(\ref{#1})}
+\renewcommand{\theequation}{(\thesection.\arabic{equation})}
+\@addtoreset{equation}{section}
+\makeatother
+
+% 数式番号の章番号だけアラビア数字にする
+\makeatletter
+\renewcommand{\theequation}{\arabic{section}.\arabic{equation}}
+\@addtoreset{equation}{section}
+\makeatother
+
+% 複数図表の管理
+\usepackage[subrefformat=parens,labelformat=parens]{subcaption}  % サブキャプション (a), (b) 形式
+
+% 表組み
+\usepackage{tabularray}  % 高機能な表作成パッケージ
+
+% URL・ハイパーリンク
+\usepackage{url}         % URLの改行処理
+%-----------------ヘッダー・フッター設定---------------------------------------
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+
+% ヘッダー・フッター初期化
+\fancyhead{}
+\fancyfoot{}
+
+% ヘッダーの設定
+% 注意: \leftmark=章名、\rightmark=節名（LaTeXの仕様）
+\fancyhead[L]{\rightmark}  % 左側：節名（例: 1.1 背景）
+\fancyhead[R]{\leftmark}   % 右側：章名（例: 第1章 序論）
+
+% フッター設定
+\fancyfoot[C]{\thepage}    % ページ番号を中央に配置
+
+% 罫線の設定
+\renewcommand{\headrulewidth}{0.4pt}  % ヘッダー下に細い罫線
+\renewcommand{\footrulewidth}{0pt}    % フッターには罫線なし
+
+% plainスタイル（章の最初のページ）の設定
+% → ヘッダーなし、フッターにページ番号のみ
+\fancypagestyle{plain}{%
+  \fancyhf{}%
+  \fancyfoot[C]{\thepage}%
+  \renewcommand{\headrulewidth}{0pt}%
+  \renewcommand{\footrulewidth}{0pt}%
+}
+
+% ヘッダーのマーク定義をカスタマイズ
+\renewcommand{\sectionmark}[1]{\markboth{第\arabic{section}章\quad #1}{第\arabic{section}章\quad #1}}
+\renewcommand{\subsectionmark}[1]{\markright{\arabic{section}.\arabic{subsection}\quad #1}}
+%-----------------見出しスタイル設定-------------------------------------------
+\usepackage{titlesec}
+
+% 章の前で改ページ（各章を新しいページから開始）
+\newcommand{\sectionbreak}{\clearpage\thispagestyle{plain}}
+
+% 章タイトル（section）のスタイル
+% フォント: 明朝体（m）、サイズ: 20pt、前後の余白設定
+\titleformat{\section}{\fontseries{m}\selectfont\fontsize{20pt}{18pt}\selectfont}{\thesection}{1em}{}
+\titlespacing*{\section}{0pt}{20pt}{42pt}  % {左余白}{上余白}{下余白}
+
+% 節タイトル（subsection）のスタイル
+% フォント: 明朝体（m）、サイズ: 16pt
+\titleformat{\subsection}{\fontseries{m}\selectfont\fontsize{16pt}{14pt}\selectfont}{\thesubsection}{1em}{}
+\titlespacing*{\subsection}{0pt}{30pt}{12pt}
+
+% 小節タイトル（subsubsection）のスタイル
+% フォント: 明朝体（m）、サイズ: 14pt
+\titleformat{\subsubsection}{\fontseries{m}\selectfont\fontsize{14pt}{13pt}\selectfont}{\thesubsubsection}{1em}{}
+\titlespacing*{\subsubsection}{0pt}{10pt}{6pt}
+%-----------------行間・段落間隔設定-------------------------------------------
+\usepackage{setspace}
+\setstretch{0.8}  % 行間倍率（0.8は狭め、標準は1.0、推奨は1.2程度）
+
+\usepackage{parskip}
+\setlength{\parskip}{6pt}      % 段落間の余白（6pt）
+\setlength{\parindent}{1em}    % 段落の字下げを1文字分に設定
+
+% parskipパッケージの影響を上書きして字下げを有効化
+\makeatletter
+\let\@afterindentfalse\@afterindenttrue
+\makeatother
+
+%-----------------カスタムコマンドの定義---------------------------------------
+
+% 数式用ショートカットコマンド
+\newcommand{\bm}{\boldsymbol}    % 数式の太字: \bm{x}
+\newcommand{\del}{\partial}      % 偏微分記号: \del
+\newcommand{\diag}{\mathrm{diag}} % 対角行列: \diag
+
+% アブストラクト用の変数（報告書形式で使用）
+\newcommand{\theabstract}{}
+
+% 指導教員情報の変数
+\newcommand{\thesupervisorname}{}     % 指導教員名
+\newcommand{\thesupervisorposition}{} % 指導教員の役職
+
+% 指導教員情報を設定するコマンド
+% 使用例: \supervisor{梅本和希}{准教授}
+\newcommand{\supervisor}[2]{%
+  \renewcommand{\thesupervisorname}{#1}%
+  \renewcommand{\thesupervisorposition}{#2}%
+}
+
+% 参考文献を目次に追加するコマンド
+% 使用例: \makebibliography{ssice}{bibfile}
+\newcommand{\makebibliography}[2]{%
+  \newpage%
+  \phantomsection%
+  \addcontentsline{toc}{section}{\numberline{}参考文献}%
+  \bibliographystyle{#1}%
+  \bibliography{#2}%
+}
+
+% 謝辞セクションを目次に追加するコマンド
+% 使用例: \makeacknowledgment{謝辞の本文}
+\newcommand{\makeacknowledgment}[1]{%
+  \newpage%
+  \phantomsection%
+  \addcontentsline{toc}{section}{\numberline{}謝辞}%
+  \section*{謝辞}%
+  #1%
+}
+
+%-----------------表紙設定用の変数---------------------------------------------
+% 表紙に表示する各種情報を格納する変数
+\newcommand{\theyear}{}         % 年度（例: 2025年度）
+\newcommand{\theuniversity}{}   % 大学名（例: 福井大学）
+\newcommand{\thedepartment}{}   % 研究科名（例: 工学研究科）
+\newcommand{\thedoctype}{}      % 文書種別（例: 学士論文、修士論文）
+\newcommand{\thetitlejp}{}      % 論文タイトル（日本語）
+\newcommand{\thetitleen}{}      % 論文タイトル（英語）
+\newcommand{\thedate}{}         % 提出日（例: 2026年2月7日）
+\newcommand{\thefaculty}{}      % 学部名（例: 福井大学 工学部）
+\newcommand{\thecourse}{}       % コース名（例: 機械工学コース）
+\newcommand{\theauthor}{}       % 氏名
+\newcommand{\thestudentid}{}    % 学籍番号
+
+% 表紙情報を一括設定するコマンド
+% 使用例: \settitlepage{2025年度}{福井大学}{工学研究科}{学士論文}{...}{...}{2026年2月7日}{山田太郎}{12345678}
+\newcommand{\settitlepage}[9]{%
+  \renewcommand{\theyear}{#1}%        % 年度
+  \renewcommand{\theuniversity}{#2}%  % 大学名
+  \renewcommand{\thedepartment}{#3}%  % 研究科名
+  \renewcommand{\thedoctype}{#4}%     % 文書種別
+  \renewcommand{\thetitlejp}{#5}%     % タイトル（日本語）
+  \renewcommand{\thetitleen}{#6}%     % タイトル（英語）
+  \renewcommand{\thedate}{#7}%        % 提出日
+  \renewcommand{\theauthor}{#8}%      % 氏名
+  \renewcommand{\thestudentid}{#9}%   % 学籍番号
+}
+
+%-----------------表紙生成コマンド---------------------------------------------
+% 表紙を生成するコマンド
+% 使用例: main.texで \maketitlepage を呼び出す
+\newcommand{\maketitlepage}{%
+  \begin{titlepage}
+    \thispagestyle{empty}  % ページ番号を表示しない
+    \begin{center}
+      % 年度
+      \vspace*{-10mm}
+      {\fontsize{16pt}{18pt}\selectfont \theyear} \\
+      \vspace{5mm}
+      
+      % 大学名・研究科名
+      {\fontsize{16pt}{18pt}\selectfont \theuniversity\ \thedepartment} \\
+      \vspace{5mm}
+      
+      % 文書種別（学士論文、修士論文など）
+      {\fontsize{16pt}{18pt}\selectfont \thedoctype} \\
+      \vspace{38mm}
+      
+      % 論文タイトル（日本語）
+      {\fontsize{24pt}{30pt}\selectfont \bfseries \thetitlejp} \\
+      \vspace{4mm}
+      \noindent\rule{1.0\textwidth}{0.5pt} \\  % 区切り線
+      \vspace{4mm}
+      
+      % 論文タイトル（英語）
+      {\fontsize{20pt}{20pt}\selectfont \thetitleen} \\
+      \vspace{33mm}
+      
+      % 提出日
+      {\fontsize{16pt}{16pt}\selectfont \thedate} \\
+      \vspace{10mm}
+      
+      % 学部・コース名
+      {\fontsize{16pt}{15pt}\selectfont \thefaculty} \\
+      \vspace{2mm}
+      {\fontsize{16pt}{15pt}\selectfont \thecourse} \\
+      \vspace{10mm}
+      
+      % 氏名
+      {\fontsize{16pt}{15pt}\selectfont 氏名 \theauthor} \\
+      \vspace{10mm}
+      
+      % 学籍番号
+      {\fontsize{16pt}{15pt}\selectfont 学籍番号 \thestudentid} \\
+      \vspace{10mm}
+      
+      % 指導教員
+      {\fontsize{16pt}{15pt}\selectfont 指導教員 \thesupervisorname\ \thesupervisorposition} \\
+    \end{center}
+  \end{titlepage}
+}
+
+%-----------------定理環境の定義-----------------------------------------------
+% 数学的な定義・定理・証明などの環境
+% 必要に応じてコメントアウト解除: %[section] → 章ごとに番号リセット
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}      % 定義
+\newtheorem{assumption}{Assumption}      % 仮定
+\newtheorem{theorem}{Theorem}            % 定理
+\newtheorem{lemma}{Lemma}                % 補題
+\newtheorem{corollary}{Corollary}        % 系
+\newtheorem{remark}{Remark}              % 注意・備考
+
+%-----------------サブキャプションの調整---------------------------------------
+% サブ図のラベルを (a), (b) 形式に設定
+\renewcommand{\thesubfigure}{(\alph{subfigure})}
+
+%-----------------ラベル表示の日本語化-----------------------------------------
+% 各種ラベルを日本語表記に変更
+\date{\number\year/\number\month/\number\day}  % 日付形式: YYYY/MM/DD
+\renewcommand{\figurename}{図}          % Figure → 図
+\renewcommand{\tablename}{表}           % Table → 表
+\renewcommand{\contentsname}{目次}      % Contents → 目次
+\renewcommand{\refname}{参考文献}      % References → 参考文献
+\renewcommand{\abstractname}{要旨}     % Abstract → 要旨
+
+% セクション番号の表記形式を変更
+\renewcommand{\thesection}{第\arabic{section}章}              % 例: 第1章
+\renewcommand{\thesubsection}{\arabic{section}.\arabic{subsection}}  % 例: 1.1
+
+%-----------------ハイパーリンク設定-------------------------------------------
+% PDF内の目次・参照・URLをクリック可能なリンクに設定
+% colorlinks=true: リンクに色を付ける（枠ではなく文字色）
+\usepackage[dvipdfmx,colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue]{hyperref}
+
+% 参考文献の引用を上付き文字に設定
+\makeatletter
+\renewcommand\@cite[2]{$^{\mbox{\scriptsize{[#1\if@tempswa , #2\fi]}}}$}
+\makeatother
+
+%-----------------付録設定-----------------------------------------------------
+\usepackage{appendix}  % 付録環境を使用可能にする
+

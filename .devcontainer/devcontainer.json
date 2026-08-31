@@ -7,25 +7,32 @@
 {
 	"name": "LaTeX",
 	// Or use a Dockerfile or Docker Compose file. More info: https://containers.dev/guide/dockerfile
-	"image": "ghcr.io/being24/latex-docker",
+	// Hermes Agent (ACP) 用に build-essential / xz-utils を追加した Dockerfile を使う
+	"build": {
+		"dockerfile": "Dockerfile"
+	},
 	"customizations": {
 		"vscode": {
 			"extensions": [
 				"James-Yu.latex-workshop",
-				"mhutchie.git-graph"
+				"mhutchie.git-graph",
+				// VS Code の ACP Client 拡張 (Hermes Agent を ACP で使う)
+				"formulahendry.acp-client",
+				// Clineいるなら
+				"saoudrizwan.claude-dev"
 			]
 		}
 	},
 	"workspaceMount": "source=${localWorkspaceFolder},target=/workdir,type=bind",
 	"workspaceFolder": "/workdir",
-	"postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}"
+	"postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
+	// Hermes のスキルを git 管理するため、~/.hermes/skills を /workdir/skills へ symlink する (冪等)
+	"postCreateCommand": "bash .devcontainer/setup-skills.sh"
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
 	// Use 'forwardPorts' to make a list of ports inside the container available locally.
 	// "forwardPorts": [],
-	// Use 'postCreateCommand' to run commands after the container is created.
-	// "postCreateCommand": "uname -a",
 	// Configure tool-specific properties.
 	// "customizations": {},
 	// Uncomment to connect as root instead. More info: https://aka.ms/dev-containers-non-root.

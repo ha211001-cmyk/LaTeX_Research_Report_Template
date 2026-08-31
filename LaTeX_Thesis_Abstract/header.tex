@@ -1,0 +1,174 @@
+%-----------------ページ余白の設定---------------------
+% 左右余白は15mm固定
+\usepackage[top=20truemm, bottom=20truemm, left=15truemm, right=15truemm]{geometry}
+
+% 段間（2段の間隔）は10mm固定
+\setlength{\columnsep}{10truemm}
+
+% 本文9ptのまま「1段あたり全角26文字」相当にするため、字間(\kanjiskip)を固定で調整
+% ※ 段幅は余白/段間で固定されるため、ここでは字間で調整する
+\newcount\GYColSP
+\newcount\GYKanjiskipSP
+\newcount\GYBaseCharsSP
+\newcount\GYBaseCharsPlusOneSP
+\newcount\GYUpperSP
+\newcount\GYLowerSP
+\newcount\GYI
+\newcommand{\GraduateSetKanjiskipForTwentySix}{%
+  \GYColSP=\number\dimexpr\columnwidth\relax
+  % 実際の和文組版幅（JFM由来の自然幅も含む）から、
+  % 26文字は入る & 27文字は入らない を同時に満たす字間を算出
+  \begingroup
+    \kanjiskip=0pt\relax
+    \setbox0=\hbox{\GYI=0\loop\ifnum\GYI<26 あ\advance\GYI by1\repeat}%
+    \global\GYBaseCharsSP=\number\dimexpr\wd0\relax
+    \setbox0=\hbox{\GYI=0\loop\ifnum\GYI<27 あ\advance\GYI by1\repeat}%
+    \global\GYBaseCharsPlusOneSP=\number\dimexpr\wd0\relax
+  \endgroup
+  % Upper bound: 26 chars fit => k <= (col - base26)/25
+  \GYUpperSP=\numexpr(\GYColSP-\GYBaseCharsSP)/25\relax
+  \ifnum\GYUpperSP>0 \advance\GYUpperSP by -1\fi
+  % Lower bound: 27 chars overflow => k > (col - base27)/26
+  \GYLowerSP=\numexpr(\GYColSP-\GYBaseCharsPlusOneSP)/26\relax
+  \advance\GYLowerSP by 1
+  \ifnum\GYUpperSP<0 \GYUpperSP=0\fi
+  \ifnum\GYLowerSP<0 \GYLowerSP=0\fi
+  \GYKanjiskipSP=\GYUpperSP
+  \ifnum\GYKanjiskipSP<\GYLowerSP
+    \GYKanjiskipSP=\GYLowerSP
+  \fi
+  \kanjiskip=\dimexpr\GYKanjiskipSP sp\relax
+}
+
+%------------------パッケージ読み込み--------------------
+% 見出し直後の段落も字下げする（\section 直後などの \noindent を無効化）
+\usepackage{indentfirst}
+% 本文の字下げ幅（和文の標準として 1zw を採用）
+\setlength{\parindent}{1zw}
+
+
+
+\usepackage{caption}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{amsmath,amssymb,amsthm}				%数式align環境,数学記号,定義・定理・証明環境
+\allowdisplaybreaks % align環境の途中での改ページ許可
+\usepackage[subrefformat=parens,labelformat=parens]{subcaption}			%複数図をまとめる
+\usepackage{tabularray}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage[superscript]{cite}
+% \usepackage{ascmac}				% 囲み
+% \usepackage{color}					%色付け
+% \usepackage{autonum} % 数式の番号管理
+% \usepackage{relsize} % 拡大縮小
+\usepackage{float} % 図の位置をその場に指定
+    % \restylefloat{figure}
+    % \restylefloat{table}
+\usepackage{wrapfig} % 図の回り込み
+% \usepackage{natbib} 
+% \usepackage[sectionbib]{chapterbib}
+% \usepackage{showkeys} % ラベル表示
+% \usepackage{abstract}
+\usepackage{fancyhdr}
+\pagestyle{fancy}
+% いったん全部クリア
+\fancyhead{}
+\fancyfoot{}
+\usepackage{titlesec}
+\titleformat*{\section}{\fontsize{10pt}{12pt}\bfseries}
+\titleformat*{\subsection}{\fontsize{10pt}{12pt}\bfseries}
+\titleformat*{\subsubsection}{\fontsize{10pt}{12pt}\bfseries}
+\usepackage{lmodern}% フォント、警告対策
+
+\titlespacing*{\section}{0pt}{3mm}{0mm}
+\titlespacing*{\subsection}{0pt}{3mm}{0mm}
+\titlespacing*{\subsubsection}{0pt}{3mm}{0mm}
+
+
+%------------------参考文献引用を上付き（例：^{[1]}）にする--------------------
+% citeパッケージの[superscript]はデフォルトで括弧なしなので、括弧を付ける
+\makeatletter
+\def\@citess#1{\mbox{$\m@th^{\hbox{\OverciteFont{\citeleft#1\citeright}}}$}}
+\makeatother
+
+% ページ番号の書式
+\newcommand{\mynumber}{--- \thepage\ ---} % 「― 1 ―」風
+
+% 偶数ページ左上(Left-Even), 奇数ページ右上(Right-Odd)
+\fancyhead[LE]{\mynumber}
+\fancyhead[RO]{\mynumber}
+
+% ヘッダー下の罫線を消したい場合
+\renewcommand{\headrulewidth}{0pt}
+
+%-------------------コマンドの定義-------------------------
+\newcommand{\bm}{\boldsymbol}
+\newcommand{\del}{\partial}
+\newcommand{\diag}{\mathrm{diag}}
+\newcommand{\theabstract}{} % まず空で用意
+\newcommand{\abstracttxt}[1]{\renewcommand{\theabstract}{#1}}
+\newcommand{\thesupervisorname}{} % まず空で用意
+\newcommand{\thesupervisorposition}{} % まず空で用意
+\newcommand{\supervisor}[2]{% 2つまとめてセット
+  \renewcommand{\thesupervisorname}{#1}%
+  \renewcommand{\thesupervisorposition}{#2}%
+}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}%[section]
+\newtheorem{assumption}{Assumption}%[section]
+\newtheorem{theorem}{Theorem}%[section]
+\newtheorem{lemma}{Lemma}%[section]
+\newtheorem{corollary}{Corollary}%[section]
+\newtheorem{remark}{Remark}%[section]
+% \renewcommand{\proofname}{\textbf{証明}}
+
+% subcaptionの調整
+% \captionsetup[subfigure]{labelformat=simple}
+% \renewcommand{\thesubfigure}{(\alph{subfigure})}
+
+
+%-------------------ラベル表示の変更-----------------------------
+\date{\number\year/\number\month/\number\day}
+\renewcommand{\figurename}{Fig.}
+\renewcommand{\tablename}{Table}
+% \renewcommand{\refname}{References}
+% \bibliographystyle{sicetran}
+% \bibliographystyle{IEEEtran}
+%\renewcommand{\theenumi}{\alph{enumi}}
+
+% タイトルのスタイル
+\makeatletter
+\renewcommand{\maketitle}{
+  \twocolumn[%
+  \begin{center}
+    \parbox{\dimexpr\textwidth-20truemm\relax}{%
+      \centering
+      {\fontsize{14pt}{16pt}\selectfont\bfseries
+        \@title\par
+      }%
+    }%
+  \end{center}
+  \hfill\begin{minipage}{0.4\linewidth}
+    \hfill\begin{tblr}{
+      colspec = {l r},
+      column{1} = {font=\bfseries, halign=l},
+      column{2} = {halign=r},
+      colsep = 0.5em,
+      rows = {abovesep=0pt, belowsep=0pt, rowsep=0pt},
+      row{1} = {belowsep=-2pt},
+    }
+      発表者 & \@author \\
+      指導教員 & \thesupervisorname & \thesupervisorposition
+    \end{tblr}
+  \end{minipage}
+  \begin{center}
+    \begin{minipage}{\linewidth}
+      % \hrule
+      {\bfseries} \theabstract
+    \end{minipage}
+  \end{center}
+  ]%
+}
+\makeatother

@@ -1,44 +1,72 @@
 ---
 name: cline-hook-debugging
-description: "Cline hook (TaskComplete) が動かない/失敗するときの診断と回避手順（hookName不一致・30秒タイムアウト・バックグラウンド委譲）"
-version: 1.0.0
+description: "ClineのTaskCompleteフックがスキップされる/失敗する問題を診断・修正する手順"
+version: 1.1.0
 author: Hermes Agent
 license: MIT
-platforms: [linux, macos]
+platforms: [linux, macos, windows]
 metadata:
   hermes:
-    tags: [cline, hooks, debugging, timeout, skill-extractor]
+    tags: [cline, hook, debugging, timeout, background-worker]
     related_skills: [hermes-agent]
 ---
+# Cline フックのデバッグ
 
-# Cline Hook デバッグ (TaskComplete)
+Cline のタスク完了フック(`.clinerules/hooks/TaskComplete`)が発火するのに処理されない、または `afterRun hook failed` になる問題の診断・修正手順。
 
-Cline のフック（`.clinerules/hooks/TaskComplete` 等）が「動かない」「Hook failed」になる際の診断・回避手順。
+## 発生する症状
+- フックは実行されるのに「対象外イベント」でスキップされる
+- タスク完了時にClineが「Hook failed」を表示する
+- フック内のLLM分析が途中で切れる
 
-## 症状1: フックは発火するが常にスキップされる
-- ログ: `[start] hook=TaskComplete` → `[skip] 対象外のイベント: TaskComplete`
-- 原因: Cline は payload の `hookName` に内部イベント名 `agent_end` ではなく**フック名** `TaskComplete` を渡す（バージョン差異）。
-- 修正: `if hook_name not in ("agent_end", "TaskComplete"):` で両対応。
-
-## 症状2: `ERROR [HooksAdapter] afterRun hook failed`
-- 原因: Cline のフック実行は **30 秒でハードコード・タイムアウト**（v4.1.16 では `extension.js` 内 `WEu=3e4`）。LLM 呼び出し等の重処理が 30 秒を超えると SIGTERM される。
-- 診断: `grep -n 'WEu=3e4' ~/.vscode-server/extensions/saoudrizwan.claude-dev-*/next/dist/extension.js`。起動ログと `afterRun hook failed` の時刻差が約30秒なら確定。
-- 補足: `Completed successfully but no JSON response found` の WARN は exit 0 なら無害。
-
-## 回避策: バックグラウンド委譲
-フック本体は即座に stdout へ `{}` を出力して exit 0。重処理はデタッチしたワーカー（`--bg`）に委譲する。
-1. 処理済みマーカー `<session>.done.json` に `n_messages` を保存。
-2. フックは `is_claimed()` で未処理のときだけワーカー起動（payload を `payload-<session>.json` に保存）。
-3. ワーカーの `mark_done()` にも `n_messages` を書く（忘れると重複実行ガードが機能しない）。
-4. 手動実行 `--payload` と `--bg` は委譲分岐に入れない。
-
-## 注意
-- `python3 script.py` で直接実行するファイルには `__pycache__` は生成されない（import されたモジュールのみ）。正常な挙動。
-- runs.log は「時刻 + スキル件数 + 一言メモ」の簡易サマリに保ち、詳細は `bg-<session>.log` へ分離する。
-
-## 検証コマンド
+## ステップ1: フック発火の確認
 ```bash
-echo '{"hookName":"TaskComplete"}' | python3 scripts/skill-extractor.py --scope project  # {} 即時 + exit 0
-python3 scripts/skill-extractor.py --self-test
-tail -5 ~/.cline/data/logs/skill-extractor/runs.log
+# skill-extractor 系スクリプトのログ(例)
+tail -50 ~/.cline/data/logs/skill-extractor/runs.log
+# Cline本体のフック実行記録
+tail ~/.cline/data/hooks.jsonl   # 場所は環境により異なる
 ```
+発火自体はしていて `[skip] 対象外のイベント: <hookName>` が出る場合 → ステップ2へ。
+
+## ステップ2: hookNameの不一致をチェック
+Clineはバージョンにより `hookName` として内部名 `agent_end` とフック名 `TaskComplete` のどちらかを送る。スクリプト側が片方しか受け付けないと常にスキップされる。
+
+```python
+# 両対応にする
+if hook_name not in ("agent_end", "TaskComplete"):
+    logger.log(f"[skip] 対象外のイベント: {hook_name}")
+    return 0
+```
+
+## ステップ3: 30秒タイムアウトの特定
+Cline拡張(v4.1.16など)はフック実行が**30秒でハードコード**されており、設定不可。LLM分析が30秒を超えると `ERROR [HooksAdapter] afterRun hook failed` になる。
+
+バンドルされた拡張コードから確認:
+```bash
+grep -o 'WEu=[0-9a-z]*' ~/.vscode-server/extensions/<cline-extension>/next/dist/extension.js
+# → WEu=3e4  (30秒)
+grep -o '.{300}afterRun hook failed.{200}' .../extension.js
+```
+ログのタイムスタンプ差(起動〜failed)が約30秒ならタイムアウトが原因。
+
+## ステップ4: バックグラウンド委譲で回避
+フック経由(stdinペイロード)のときは重い処理をデタッチしたワーカー(`--bg`)に委譲し、フック自体は即座に `{}` を返して exit 0 する。
+
+要点:
+- ペイロードを一時ファイルに保存してワーカーに渡す
+- `subprocess.Popen(..., start_new_session=True)` などでデタッチ
+- 処理済みマーカー(`<session>.done.json`)に `n_messages` を記録し、メッセージ数が増えたときだけ再処理
+- フックのフォアグラウンドはstdoutを `{}` のみにする(`quiet=True`)
+
+## ステップ5: ログの分離設計
+- **詳細ログ**: 従来どおり `~/.cline/data/logs/` 配下(`runs.log` + `bg-<session>.log`)。元の配置・形式は触らない
+- **簡易サマリ**: `scripts/<name>.log` に「時刻 + スキル追加件数 + 一言メモ」だけを独自に書き出す。`.gitignore` で除外する
+
+## 検証手順
+```bash
+python3 scripts/skill-extractor.py --self-test
+# フック模擬(即時リターンすることを確認)
+echo '{"hookName":"TaskComplete"}' | python3 scripts/skill-extractor.py --scope project
+# → 即座に {} と exit 0
+```
+ワーカーの完了は簡易ログの `[done]` 行で確認する。

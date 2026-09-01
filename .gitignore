@@ -10,6 +10,9 @@ __pycache__/
 ## API env (setup_cline_skills.py が Cline 設定から生成、API キーを含む):
 /scripts/.env
 
+## skill-extractor の簡易サマリログ (scripts/ 配下に書き出す独自ログ):
+/scripts/skill-extractor.log
+
 .DS_Store
 Thumbs.db
 

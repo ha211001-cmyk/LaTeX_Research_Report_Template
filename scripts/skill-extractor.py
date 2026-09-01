@@ -40,6 +40,8 @@ Cline 用のフラット構造 (.agents/skills) の symlink を再構築する�
     SKILL_EXTRACTOR_ENV_FILE       .env ファイルのパス (デフォルト scripts/.env。存在すれば読み込む)
     SKILL_EXTRACTOR_LOG_DIR        ログ・マーカーのディレクトリ
                                   (デフォルト ~/.cline/data/logs/skill-extractor)
+    SKILL_EXTRACTOR_SUMMARY_LOG    簡易サマリログのパス
+                                  (デフォルト scripts/skill-extractor.log。git 追跡対象外)
     SKILL_EXTRACTOR_MIN_MESSAGES   分析対象とする最小メッセージ数 (デフォルト 4)
     SKILL_EXTRACTOR_MAX_TRANSCRIPT_CHARS  トランスクリプト上限 (デフォルト 100000)
     SKILL_EXTRACTOR_MAX_TOKENS     LLM 出力上限 (デフォルト 8000)
@@ -130,17 +132,26 @@ load_env_file(ENV_FILE)  # モジュール読み込み時点で反映 (resolve_a
 class Logger:
     """フックは detached 実行で stdout が捨てられるため、常にファイルへ書く。
 
-    - log():    runs.log へ追記。簡易サマリ用 (時刻 + 件数 + 一言メモ)。
-    - detail(): stdout のみ (runs.log には書かない)。詳細はバックグラウンド
-                ワーカーの bg-<session>.log 側へ流れる。
-    quiet=True (フックのフォアグラウンド) では detail は抑制される。
+    - runs.log (デフォルト ~/.cline/data/logs/skill-extractor/runs.log):
+      詳細ログ。Cline の元のログ配置は触らず、元の形式のまま追記する。
+    - summary_log (デフォルト scripts/skill-extractor.log):
+      簡易サマリ (時刻 + スキル追加件数 + 一言メモ)。独自ログとして
+      scripts/ 配下に書き出す (git 追跡対象外)。
+    quiet=True (フックのフォアグラウンド) では stdout への print は抑制される。
     """
 
     def __init__(self, log_dir: Path, quiet: bool = False):
         self.log_dir = log_dir
         self.runs_log = log_dir / "runs.log"
+        self.summary_log = Path(
+            env_or("SKILL_EXTRACTOR_SUMMARY_LOG", str(SCRIPT_DIR / "skill-extractor.log"))
+        )
         self.quiet = quiet
         log_dir.mkdir(parents=True, exist_ok=True)
+        try:
+            self.summary_log.parent.mkdir(parents=True, exist_ok=True)
+        except OSError:
+            pass
 
     def _ts(self) -> str:
         return datetime.now(timezone.utc).isoformat(timespec="seconds")
@@ -155,10 +166,16 @@ class Logger:
         if not self.quiet:
             print(message)  # 手動実行時の可視化用 (フック時は捨てられる)
 
-    def detail(self, message: str) -> None:
-        """runs.log には書かず、詳細を stdout だけに出す (bg ログ向け)。"""
+    def summary(self, message: str) -> None:
+        """簡易サマリを scripts/skill-extractor.log に追記する。"""
+        line = f"[{self._ts()}] {message}\n"
+        try:
+            with open(self.summary_log, "a", encoding="utf-8") as f:
+                f.write(line)
+        except OSError:
+            pass
         if not self.quiet:
-            print(message)
+            print(f"[summary] {message}")
 
 
 def mask_key(key: str) -> str:
@@ -710,16 +727,19 @@ def main() -> int:
             payload = json.loads(args.payload.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError) as exc:
             logger.log(f"[error] ペイロードファイル読込失敗: {exc}")
+            logger.summary("エラー: ペイロードファイル読込失敗")
             return 0
     else:
         raw = sys.stdin.read()
         if not raw.strip():
             logger.log("[skip] stdin が空 (フック外で実行された可能性)")
+            logger.summary("スキップ: stdin が空")
             return 0
         try:
             payload = json.loads(raw)
         except json.JSONDecodeError as exc:
             logger.log(f"[skip] ペイロードが JSON ではない: {exc}")
+            logger.summary("スキップ: ペイロードが JSON ではない")
             return 0
 
     scope = args.scope
@@ -727,7 +747,7 @@ def main() -> int:
     agent_id = payload.get("agentId")
     conv_id = payload.get("conversationId")
     parent_id = payload.get("parentAgentId")
-    logger.detail(
+    logger.log(
         f"[start] scope={scope} hook={hook_name} agentId={agent_id} "
         f"conversationId={conv_id} parentAgentId={parent_id}"
     )
@@ -736,9 +756,11 @@ def main() -> int:
     # "TaskComplete" (フック名) のどちらかで渡る。両方受け付ける。
     if hook_name not in ("agent_end", "TaskComplete"):
         logger.log(f"[skip] 対象外のイベント: {hook_name}")
+        logger.summary(f"スキップ: 対象外イベント {hook_name}")
         return 0
     if parent_id:
         logger.log("[skip] サブエージェントのセッションのため対象外")
+        logger.summary("スキップ: サブエージェントのセッション")
         return 0
 
     # ---- セッション解決 ----
@@ -746,9 +768,10 @@ def main() -> int:
     session = resolve_session(payload, db_path)
     if not session:
         logger.log("[skip] セッションを解決できませんでした")
+        logger.summary("スキップ: セッションを解決できません")
         return 0
     session_id = session.get("session_id")
-    logger.detail(f"[session] {session_id} model={session.get('model')}")
+    logger.log(f"[session] {session_id} model={session.get('model')}")
 
     sessions_dir = args.sessions_dir or SESSIONS_DIR
     messages_path = Path(session.get("messages_path") or "")
@@ -756,6 +779,7 @@ def main() -> int:
         messages_path = sessions_dir / session_id / f"{session_id}.messages.json"
     if not messages_path.is_file():
         logger.log(f"[skip] トランスクリプトがありません: {messages_path}")
+        logger.summary("スキップ: トランスクリプトがありません")
         return 0
 
     # ---- メッセージ数で事前フィルタ ----
@@ -771,6 +795,7 @@ def main() -> int:
     min_msgs = int(env_or("SKILL_EXTRACTOR_MIN_MESSAGES", 4))
     if n_messages < min_msgs:
         logger.log(f"[skip] メッセージ数 {n_messages} < {min_msgs} (短すぎる)")
+        logger.summary(f"スキップ: メッセージ数不足 ({n_messages}/{min_msgs})")
         return 0
 
     # ---- バックグラウンド委譲 (フック経由のときのみ) ----
@@ -780,6 +805,7 @@ def main() -> int:
     if not args.bg and not args.payload:
         if is_claimed(session_id, log_dir, n_messages):
             logger.log("[skip] 既に処理済み (新規メッセージなし)")
+            logger.summary("スキル追加: 0件 (既に処理済み)")
             return 0
         try:
             payload_file = log_dir / f"payload-{session_id}.json"
@@ -788,6 +814,7 @@ def main() -> int:
             )
         except OSError as exc:
             logger.log(f"[error] ペイロード保存失敗: {exc}")
+            logger.summary("エラー: ペイロード保存失敗")
             return 0
         bg_log = log_dir / f"bg-{session_id}.log"
         cmd = [
@@ -806,17 +833,19 @@ def main() -> int:
                 )
         except OSError as exc:
             logger.log(f"[error] バックグラウンド起動失敗: {exc}")
+            logger.summary("エラー: バックグラウンド起動失敗")
             return 0
         logger.log(f"[bg] バックグラウンド処理を開始 pid={proc.pid} (ログ: {bg_log})")
         print("{}")  # Cline が stdout を JSON として解釈するため空 JSON を返す
         return 0
 
     if args.bg:
-        logger.detail(f"[bg] ワーカー開始 scope={scope} session={session_id}")
+        logger.log(f"[bg] ワーカー開始 scope={scope} session={session_id}")
 
     # ---- 重複実行ガード ----
     if not args.force and not claim_work(session_id, log_dir, n_messages):
         logger.log("[skip] 既に処理済み (新規メッセージなし)")
+        logger.summary("スキル追加: 0件 (既に処理済み)")
         return 0
 
     # ---- トランスクリプト抽出 ----
@@ -825,14 +854,17 @@ def main() -> int:
         transcript = load_transcript(messages_path, max_chars)
     except (OSError, json.JSONDecodeError) as exc:
         logger.log(f"[error] トランスクリプト抽出失敗: {exc}")
+        logger.summary("エラー: トランスクリプト抽出失敗")
         return 0
     if not transcript:
         logger.log("[skip] 抽出できる内容がありません")
+        logger.summary("スキップ: 抽出できる内容がありません")
         return 0
-    logger.detail(f"[transcript] {len(transcript)} chars, {n_messages} messages")
+    logger.log(f"[transcript] {len(transcript)} chars, {n_messages} messages")
 
     if args.no_llm:
         logger.log("[dry] --no-llm のためここで終了 (配管は正常)")
+        logger.summary("スキップ: --no-llm (テスト実行)")
         return 0
 
     # ---- スキルルート決定 ----
@@ -851,10 +883,11 @@ def main() -> int:
     api_key = resolve_api_key()
     if not api_key:
         logger.log("[error] API キーを解決できません (env / secrets.json / providers.json)")
+        logger.summary("エラー: API キーを解決できません")
         return 0
 
     user_content = build_user_content(session, transcript, categories, skills)
-    logger.detail(f"[llm] {api_base} model={model} (キー: {mask_key(api_key)})")
+    logger.log(f"[llm] {api_base} model={model} (キー: {mask_key(api_key)})")
 
     RETRY_HINT = (
         "\n\nIMPORTANT: your previous response was truncated or invalid JSON. "
@@ -877,24 +910,28 @@ def main() -> int:
         except urllib.error.HTTPError as exc:
             last_err = f"HTTP {exc.code}: {exc.read().decode('utf-8', 'replace')[:300]}"
             logger.log(f"[error] LLM HTTP {exc.code} ({attempt} 回目)")
+            logger.summary(f"エラー: LLM HTTP {exc.code}")
             return 0
         except (urllib.error.URLError, TimeoutError, OSError) as exc:
             last_err = f"接続失敗: {exc}"
             logger.log(f"[error] LLM 呼び出し失敗 ({attempt} 回目): {exc}")
+            logger.summary("エラー: LLM 接続失敗")
             return 0
 
     if proposal is None:
         logger.log(f"[error] LLM 応答を JSON として解釈できませんでした: {last_err}")
-        logger.detail(f"[error] raw: {raw[:500]}")
+        logger.log(f"[error] raw: {raw[:500]}")
+        logger.summary("エラー: LLM 応答を解析できませんでした")
         return 0
-    logger.detail(f"[llm] 応答 {len(raw)} chars")
+    logger.log(f"[llm] 応答 {len(raw)} chars")
 
     summary = proposal.get("summary", "")
     proposed = proposal.get("skills", [])
-    logger.detail(f"[llm] summary: {summary} | 提案スキル数: {len(proposed)}")
+    logger.log(f"[llm] summary: {summary} | 提案スキル数: {len(proposed)}")
 
     if not proposed:
-        logger.log("スキル追加: 0件")
+        logger.log("[done] 追加・更新するスキルなし")
+        logger.summary("スキル追加: 0件")
         mark_done(session_id, log_dir, n_messages,
                   {"status": "no-change", "summary": summary})
         return 0
@@ -902,17 +939,19 @@ def main() -> int:
     # ---- 適用 ----
     changed = apply_changes(proposal, skills_root, args.dry_run)
     if not changed:
-        logger.log("スキル追加: 0件")
+        logger.log("[done] 適用可能な提案なし")
+        logger.summary("スキル追加: 0件")
         return 0
 
     # ---- setup 再実行 ----
     setup_out = run_setup(skills_root, dry_run=args.dry_run)
     if setup_out:
-        logger.detail(f"[setup] output tail:\n{setup_out[-1200:]}")
+        logger.log(f"[setup] output tail:\n{setup_out[-1200:]}")
 
     mark_done(session_id, log_dir, n_messages,
               {"status": "changed", "changed": changed, "summary": summary})
-    logger.log(f"スキル追加: {len(changed)}件 ({fmt_skills(changed, skills_root)}) — {summary}")
+    logger.log(f"[done] スキル {len(changed)} 件を処理しました")
+    logger.summary(f"スキル追加: {len(changed)}件 ({fmt_skills(changed, skills_root)}) — {summary}")
     return 0
 
 

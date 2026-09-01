@@ -334,7 +334,11 @@ python3 scripts/skill-extractor.py --force --dry-run --payload /path/to/payload.
 
 使用する API は `scripts/.env`（存在すれば自動読込）または環境変数 `SKILL_EXTRACTOR_API_BASE` / `SKILL_EXTRACTOR_MODEL` / `SKILL_EXTRACTOR_API_KEY` で指定できます（**既存の環境変数が優先**。`.env` は読み込み専用で、書き出しは `setup_cline_skills.py` の役割です）。
 
-> **Cline のフックは 30 秒でタイムアウトする**（v4.1.16 ではハードコード）ため、フック経由（stdin ペイロード）のときは、LLM 分析をデタッチしたバックグラウンドワーカー（`--bg`）に委譲して即座に完了します（stdout には空 JSON `{}` を返す）。実行結果は `~/.cline/data/logs/skill-extractor/runs.log` に「時刻 + スキル追加件数 + 一言メモ」の簡易ログとして記録されます（詳細は `bg-<session>.log`）。
+> **Cline のフックは 30 秒でタイムアウトする**（v4.1.16 ではハードコード）ため、フック経由（stdin ペイロード）のときは、LLM 分析をデタッチしたバックグラウンドワーカー（`--bg`）に委譲して即座に完了します（stdout には空 JSON `{}` を返す）。
+>
+> **ログは2系統です。**
+> - 詳細ログ: `~/.cline/data/logs/skill-extractor/runs.log`（従来どおり。Cline の元のログ配置・形式は触らない）
+> - 簡易サマリ: `scripts/skill-extractor.log`（時刻 + スキル追加件数 + 一言メモ。独自ログとして `scripts/` 配下に書き出し。git 追跡対象外）
 
 動作の詳細・環境変数（`SKILL_EXTRACTOR_*`）は `scripts/skill-extractor.py` の docstring を参照してください。
 
@@ -358,7 +362,7 @@ python3 scripts/skill-extractor.py --force --dry-run --payload /path/to/payload.
 | ビルド時にフォントの警告が出る | `header.tex` の「本文を細字に設定」ブロックをコメントアウトすると解消します |
 | Overleaf でエラーになる | コンパイラを「LaTeX」に設定し、`latexmkrc` をアップロードする |
 | コンテナ再構築後に hermes の設定が消えた | `hermes setup` を再実行する。スキルは symlink + git 管理なので失われません |
-| タスク完了時に Cline が「Hook failed」を表示する | フック実行は Cline 側で **30 秒タイムアウト**（v4.1.16 ではハードコード）。`scripts/skill-extractor.py` はバックグラウンド委譲（`--bg`）で回避済み。`~/.cline/data/logs/skill-extractor/runs.log` に「時刻 + スキル追加件数 + メモ」の簡易ログが記録されていれば正常動作。`[llm]` の応答が遅い場合は DeepSeek 側の混雑 |
+| タスク完了時に Cline が「Hook failed」を表示する | フック実行は Cline 側で **30 秒タイムアウト**（v4.1.16 ではハードコード）。`scripts/skill-extractor.py` はバックグラウンド委譲（`--bg`）で回避済み。`scripts/skill-extractor.log`（簡易サマリ）に「時刻 + スキル追加件数 + メモ」、`~/.cline/data/logs/skill-extractor/runs.log` に詳細が記録されていれば正常動作。`[llm]` の応答が遅い場合は DeepSeek 側の混雑 |
 | 画像が表示されない | `fig/` にファイルを置き、`\includegraphics[width=...]{fig/ファイル名}` のパス・拡張子を確認 |
 | 参考文献が出ない | `\cite{キー}` のキーと `bibfile.bib` のエントリが一致しているか確認 |
 

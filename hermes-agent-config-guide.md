@@ -3,7 +3,7 @@
 調査日: 2026-08-31 / 対象: Hermes Agent v0.20.6 (`hermes-agent-install-notes.md` の続編)
 
 > この資料は **「設定ファイルがどこにあり、どう編集するか」** に特化したガイド。
-> インストール手順は [hermes-agent-install-notes.md](./hermes-agent-install-notes.md) を参照。
+> インストール手順は [hermes-agent-install-notes.md](いろいろ/hermes-agent-install-notes.md) を参照。
 
 ---
 
@@ -264,5 +264,5 @@ hermes config migrate
 - 環境変数リファレンス: https://hermes-agent.nousresearch.com/docs/reference/environment-variables
 - プロファイル: https://hermes-agent.nousresearch.com/docs/user-guide/profiles
 - CLI コマンドリファレンス: https://hermes-agent.nousresearch.com/docs/reference/cli-commands
-- 導入メモ (前編): [hermes-agent-install-notes.md](./hermes-agent-install-notes.md)
+- 導入メモ (前編): [hermes-agent-install-notes.md](いろいろ/hermes-agent-install-notes.md)
 

@@ -17,9 +17,7 @@
 				"James-Yu.latex-workshop",
 				"mhutchie.git-graph",
 				// VS Code の ACP Client 拡張 (Hermes Agent を ACP で使う)
-				"formulahendry.acp-client",
-				// Clineいるなら
-				"saoudrizwan.claude-dev"
+				"formulahendry.acp-client"
 			]
 		}
 	},

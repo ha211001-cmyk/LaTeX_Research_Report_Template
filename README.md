@@ -2,7 +2,7 @@
 
 このリポジトリは、**研究報告書・卒業論文（本旨）・卒業論文要旨の 3 種類の LaTeX テンプレート**と、環境構築が不要な **VS Code + Docker 開発環境**をまとめたものです。
 
-> AI エージェント連携（Cline / Hermes Agent）の解説は [いろいろ/ai-agent-setup-guide.md](いろいろ/ai-agent-setup-guide.md) へ移行しました。
+> AI エージェント（Hermes Agent）の解説は [ai-agent-setup-guide.md](ai-agent-setup-guide.md) へ移行しました。
 
 LaTeX や Docker に詳しくなくても、以下の「使い方」の手順どおりに進めれば PDF を出力するところまで到達できます。
 
@@ -175,7 +175,7 @@ LaTeX_Thesis/
 
 Dev Container のビルド内容（`.devcontainer/`）:
 
-- `Dockerfile`: `being24/latex-docker` をベースに `build-essential`・`xz-utils` を追加。AI エージェント（Hermes Agent / Cline）向けの環境も同梱（詳細は [いろいろ/ai-agent-setup-guide.md](いろいろ/ai-agent-setup-guide.md)）
+- `Dockerfile`: `being24/latex-docker` をベースに `build-essential`・`xz-utils` を追加。AI エージェント（Hermes Agent）向けの環境も同梱（詳細は [ai-agent-setup-guide.md](ai-agent-setup-guide.md)）
 - `devcontainer.json`: VS Code 拡張（LaTeX Workshop / Git Graph ほか）の自動インストール、`postCreateCommand` で `setup-skills.sh` を実行
 - `setup-skills.sh`: エージェントのスキルを git 管理するための移行スクリプト（冪等）
 
@@ -246,7 +246,7 @@ dvipdfmx main.dvi           # PDF 化
 | `.devcontainer/devcontainer.json` | コンテナの設定（ビルド元・拡張・起動フック） |
 | `.devcontainer/Dockerfile` | ベースイメージへの依存追加（AI エージェント環境含む） |
 | `.devcontainer/setup-skills.sh` | スキルの git 管理移行（冪等） |
-| `.gitignore` | LaTeX 中間ファイル・`.agents/`・`.cline/` を除外 |
+| `.gitignore` | LaTeX 中間ファイル等の生成物を除外 |
 
 ---
 
@@ -278,10 +278,9 @@ latexmk main-diffHEAD.tex             # 差分ファイルをコンパイル
 
 ## 6. AI エージェント連携
 
-Cline / Hermes Agent のセットアップ方法と、`scripts/setup_cline_skills.py` の実行による
-**Cline のフック（TaskComplete）経由のスキル自動更新**の有効化手順は、以下のファイルに移行しました。
+Hermes Agent のセットアップ方法（プロバイダ / モデル設定、スキルの git 管理）は、以下のファイルに移行しました。
 
-→ **`いろいろ/ai-agent-setup-guide.md`** を参照
+→ **`ai-agent-setup-guide.md`** を参照
 
 ---
 
@@ -319,13 +318,13 @@ Cline / Hermes Agent のセットアップ方法と、`scripts/setup_cline_skill
 - [LaTeX Workshop（VS Code 拡張）](https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop)
 - [VS Code Dev Containers ドキュメント](https://code.visualstudio.com/docs/devcontainers/containers)
 
-### リポジトリ内の資料（`いろいろ/`）
+### リポジトリ内の資料
 
 | ファイル | 内容 |
 |---|---|
 | `docker-latexガイド/docker-latex-guide.md` | VS Code + Docker + 卒論テンプレートの説明スライド（Marp） |
 | `README_thesis.md` | 卒論テンプレート用の旧 README（要旨の書式修正履歴つき） |
-| `ai-agent-setup-guide.md` | Cline / Hermes Agent のセットアップとスキル自動更新の解説（README 6 章からの移行先） |
+| `ai-agent-setup-guide.md` | Hermes Agent のセットアップ解説（README 6 章からの移行先） |
 | `hermes-agent-install-notes.md` | Hermes Agent 導入の調査メモ |
 | `hermes-agent-config-guide.md` | Hermes Agent の設定ガイド |
 

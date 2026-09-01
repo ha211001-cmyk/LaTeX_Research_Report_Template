@@ -1,37 +1,39 @@
 ---
 name: hermes-bundled-skills-sync
-description: "Why Hermes bundled skills reappear, when sync overwrites them, and how manifest hashing protects your edits"
+description: "Understand and troubleshoot Hermes Agent bundled-skills seeding, startup sync, and overwrite protection"
 version: 1.0.0
 author: Hermes Agent
 license: MIT
 platforms: [linux, macos, windows]
 metadata:
   hermes:
-    tags: [hermes, skills, bundled-skills, sync, devcontainer, troubleshooting]
+    tags: [hermes, skills, sync, bundled, devcontainer, troubleshooting]
     related_skills: [hermes-agent]
 ---
-
-# Hermes Bundled Skills Sync — Troubleshooting
+# Hermes Bundled Skills Sync
 
 ## Overview
-Hermes seeds ~80 bundled skills (apple, email, media, social-media, ...) into `~/.hermes/skills` at install and re-syncs them on every startup (`hermes_cli/main.py::_sync_bundled_skills_for_startup` / `_sync_bundled_skills_quietly` → `tools/skills_sync.py::sync_skills`). This explains why deleting bundled skills "doesn't stick" and why your edits are never silently overwritten.
+Hermes installs ~81 bundled skills into `~/.hermes/skills`. On every startup it re-syncs them from the bundled tree (`hermes_cli/main.py` → `_sync_bundled_skills_for_startup()`/`_sync_bundled_skills_quietly()` → `tools/skills_sync.py::sync_skills`), tracked by a manifest (`.bundled_manifest`, format `skill_name:origin_hash` = MD5 at sync time; v1 plain-name manifests auto-migrate).
 
-## Why deleted skills come back
-1. The Docker image (`.devcontainer/Dockerfile`) bakes the bundled skills into an image layer, first-seeding `~/.hermes/skills` at install time.
-2. `devcontainer.json` `postCreateCommand` runs `.devcontainer/setup-skills.sh`, which copies the whole skills tree into the git repo with `cp -a --update=none` (no-clobber) and symlinks `~/.hermes/skills -> /workdir/skills`.
-   - `--update=none` = "copy only files absent at the destination" → skills you deleted from git count as "absent" and are restored from the image.
-   - Existing files are never overwritten by this step.
+## Sync rules (overwrite protection)
+| State | Behavior |
+|---|---|
+| Bundled unchanged since last sync | skip |
+| Bundled changed & local unedited | **update (only automatic overwrite)** |
+| Bundled changed & local edited | skip & keep (user-modified, permanently protected) |
+| In manifest but absent from disk | treat as user-deleted; not re-added |
+| `.no-bundled-skills` marker | skip all bundled seeding except essential skills |
 
-## When existing skills ARE/AREN'T overwritten
-`sync_skills` manifest logic (`.bundled_manifest`, per-skill origin hash):
-- Bundled skill unchanged → skip entirely.
-- Bundled changed AND local unmodified (hash matches manifest) → updated. This is the only automatic overwrite path.
-- Bundled changed AND local edited → skipped and kept (user-modified protection). Edits are protected forever unless you explicitly run:
-  - `hermes skills reset <name> --restore` (discard edits)
-  - `hermes skills update --force` (force overwrite)
+User edits are **never** auto-overwritten. Explicit overwrite only via `hermes skills reset <name> --restore` or `hermes skills update --force`. `HERMES_BUNDLED_SKILLS` points at a custom bundled-skill tree (Homebrew/Nix).
 
-## Key takeaways
-- Edit skills under the git-managed `/workdir/skills` freely — the sync never overwrites your changes.
-- Deleting a bundled category from git only "sticks" if you also prevent the image seeding, e.g. accept the no-clobber copy-back or stop shipping the bundled skills in the image.
-- `.bundled_manifest` hashes change on `hermes update` — an expected git diff.
-- Confirm current state with: `ls -l ~/.hermes/skills` (symlink? real dir?) and `git status skills/`.
+## Why deleted skills reappear (devcontainer gotcha)
+In Dev Containers the image seeds all bundled skills into `~/.hermes/skills`, and a `postCreateCommand` (e.g. `setup-skills.sh`) copies them into the git repo:
+```bash
+cp -a --update=none "$HOME/.hermes/skills"/. /workdir/skills/
+rm -rf "$HOME/.hermes/skills" && ln -sfn /workdir/skills "$HOME/.hermes/skills"
+```
+`--update=none` is **no-clobber**: it copies only files missing at the destination. Deleting a bundled category (e.g. `skills/apple`) from git makes it "missing", so the image-seeded copy is re-added on every container start — deletion cannot be persisted this way.
+
+## Troubleshooting
+- **Deleted skills keep coming back** → caused by image seeding + no-clobber `cp` in the setup script, not by Hermes itself. Give up on deleting bundled skills from a git-managed copy, or mount a separate user-skills dir.
+- **Will my edits be overwritten?** → No. `--update=none` skips existing files, and `sync_skills` hash comparison protects edited skills.

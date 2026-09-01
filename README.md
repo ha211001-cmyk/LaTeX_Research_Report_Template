@@ -1,6 +1,8 @@
-# 研究室用 LaTeX テンプレート集 with Cline / Hermes Agent on VS Code + Docker
+# 研究室用 LaTeX テンプレート集 on VS Code + Docker
 
-このリポジトリは、**研究報告書・卒業論文（本旨）・卒業論文要旨の 3 種類の LaTeX テンプレート**と、環境構築が不要な **VS Code + Docker 開発環境**、さらに **AI エージェント（Hermes Agent / Cline）連携** をまとめたものです。
+このリポジトリは、**研究報告書・卒業論文（本旨）・卒業論文要旨の 3 種類の LaTeX テンプレート**と、環境構築が不要な **VS Code + Docker 開発環境**をまとめたものです。
+
+> AI エージェント連携（Cline / Hermes Agent）の解説は [いろいろ/ai-agent-setup-guide.md](いろいろ/ai-agent-setup-guide.md) へ移行しました。
 
 LaTeX や Docker に詳しくなくても、以下の「使い方」の手順どおりに進めれば PDF を出力するところまで到達できます。
 
@@ -42,13 +44,13 @@ macOS / Windows / Linux すべて対応しています。**TeX Live などを自
 
 **Step 4.** 左下の緑色のアイコン `><` をクリックし、**「Reopen in Container」** を選択します。
 
-- 初回は Docker イメージのダウンロードとビルド（Hermes Agent のインストール含む）が走るため、**数分〜十数分**かかります。2 回目以降は高速です。
+- 初回は Docker イメージのダウンロードとビルドが走るため、**数分〜十数分**かかります。2 回目以降は高速です。
 - 完了すると自動的にコンテナ内でフォルダが開き直されます。
 
 **Step 5.** VS Code のメニュー「表示」→「ターミナル」でターミナルを開き、環境が入っていることを確認します。
 
 ```bash
-which latexmk hermes   # 両方のパスが表示されれば OK
+which latexmk   # パスが表示されれば OK
 ```
 
 ### 1.3 どのテンプレートを使うか
@@ -168,14 +170,14 @@ LaTeX_Thesis/
 
 | イメージ | 説明 |
 |---|---|
-| `ghcr.io/being24/latex-docker` | フル機能版。このリポジトリの Dev Container のベース（`.devcontainer/Dockerfile` で Hermes Agent 用の依存を追加） |
+| `ghcr.io/being24/latex-docker` | フル機能版。このリポジトリの Dev Container のベース（`.devcontainer/Dockerfile`） |
 | `paperist/alpine-texlive-ja` | 軽量版。コマンドで手軽に試す場合に |
 
 Dev Container のビルド内容（`.devcontainer/`）:
 
-- `Dockerfile`: `being24/latex-docker` をベースに `build-essential`・`xz-utils` を追加 → **Hermes Agent を自動インストール**（`--skip-setup --non-interactive --skip-browser --skip-computer-use`）
-- `devcontainer.json`: VS Code 拡張（LaTeX Workshop / Git Graph / ACP Client / Cline）の自動インストール、`postCreateCommand` で `setup-skills.sh` を実行
-- `setup-skills.sh`: Hermes のスキルディレクトリを `~/.hermes/skills` → `/workdir/skills` の **symlink** に置き換え（コンテナ再構築で消えないよう git 管理）
+- `Dockerfile`: `being24/latex-docker` をベースに `build-essential`・`xz-utils` を追加。AI エージェント（Hermes Agent / Cline）向けの環境も同梱（詳細は [いろいろ/ai-agent-setup-guide.md](いろいろ/ai-agent-setup-guide.md)）
+- `devcontainer.json`: VS Code 拡張（LaTeX Workshop / Git Graph ほか）の自動インストール、`postCreateCommand` で `setup-skills.sh` を実行
+- `setup-skills.sh`: エージェントのスキルを git 管理するための移行スクリプト（冪等）
 
 ### 3.2 docker コマンドでの手動起動（Dev Container を使わない場合）
 
@@ -221,8 +223,6 @@ dvipdfmx main.dvi           # PDF 化
 |---|---|
 | **LaTeX Workshop** | ビルド・プレビュー・SyncTeX |
 | **Git Graph** | コミット履歴の可視化 |
-| **ACP Client** | Hermes Agent を VS Code から使う |
-| **Cline**（claude-dev） | Cline エージェント |
 
 ### 4.2 ビルド・プレビュー
 
@@ -244,7 +244,7 @@ dvipdfmx main.dvi           # PDF 化
 |---|---|
 | `.vscode/settings.json` | LaTeX Workshop のツール・レシピ・ビューア設定 |
 | `.devcontainer/devcontainer.json` | コンテナの設定（ビルド元・拡張・起動フック） |
-| `.devcontainer/Dockerfile` | ベースイメージへの依存追加 + Hermes Agent 導入 |
+| `.devcontainer/Dockerfile` | ベースイメージへの依存追加（AI エージェント環境含む） |
 | `.devcontainer/setup-skills.sh` | スキルの git 管理移行（冪等） |
 | `.gitignore` | LaTeX 中間ファイル・`.agents/`・`.cline/` を除外 |
 
@@ -278,74 +278,10 @@ latexmk main-diffHEAD.tex             # 差分ファイルをコンパイル
 
 ## 6. AI エージェント連携
 
-このリポジトリには、LaTeX 執筆を AI エージェントで支援する仕組みも含まれています。使わなくても LaTeX 執筆自体には影響しません。
+Cline / Hermes Agent のセットアップ方法と、`scripts/setup_cline_skills.py` の実行による
+**Cline のフック（TaskComplete）経由のスキル自動更新**の有効化手順は、以下のファイルに移行しました。
 
-### 6.1 Hermes Agent（ACP 経由で VS Code 内利用）
-
-- Dev Container のビルド時に自動インストール済み。ターミナルで `hermes` コマンドが使えます
-- VS Code の **ACP Client** 拡張から接続すると、エディタ内でタスクを依頼できます
-- 初回のみプロバイダ / モデルの設定が必要です:
-
-```bash
-hermes setup    # セットアップウィザード（API キー等）
-hermes model    # プロバイダ / モデル選択
-hermes doctor   # 環境診断
-hermes          # 対話開始
-```
-
-- 設定・履歴は `~/.hermes/` に保存されます。**コンテナ再構築で消える**ため、スキルは `/workdir/skills` への symlink で git 管理して失われないようにしています
-- 導入の調査メモは `いろいろ/hermes-agent-install-notes.md`
-
-### 6.2 Cline 連携とスキルの管理
-
-`skills/` は Hermes 形式（`<カテゴリ>/<スキル名>/SKILL.md`）で **git 管理**されています。Cline はカテゴリ階層を再帰しないため、セットアップスクリプトがフラットな symlink を張ります。
-
-```bash
-python3 scripts/setup_cline_skills.py             # 冪等にセットアップ
-python3 scripts/setup_cline_skills.py --dry-run   # 実行せず予告のみ
-python3 scripts/setup_cline_skills.py --prune     # 不要な symlink も削除
-python3 scripts/setup_cline_skills.py --no-hooks  # Hooks のみスキップ
-python3 scripts/setup_cline_skills.py --no-env    # .env 書き出しのみスキップ
-```
-
-セットアップされるもの:
-
-| 配置物 | 中身 |
-|---|---|
-| `.agents/skills/<skill>` | `skills/<category>/<skill>` への symlink（Cline 用フラット構造） |
-| `.clinerules/hooks/TaskComplete` | `scripts/taskcomplete.sh` の**コピー**。ファイル名は Cline のフック名（`TaskComplete`）と一致させる（Cline は `<hooks_dir>/<HookName>` を完全一致で検出） |
-| `.clinerules/rules` | `scripts/instructions/` への symlink（Cline が `.clinerules` を再帰走査してルールとして読む） |
-| `~/.hermes/SOUL.md` | `scripts/instructions/Instructions.md` への symlink |
-| `scripts/.env` | Cline の OpenAI 互換 API 設定（`SKILL_EXTRACTOR_*`）の書き出し。**git 追跡除外**・パーミッション 600（API キー含む） |
-
-> `.agents/`・`.cline/`・`.clinerules/` は `.gitignore` 済み（生成物）。git 管理するのは `skills/`・`scripts/` 側です。
-
-また `setup_cline_skills.py` は Cline の設定（`~/.cline/data/globalState.json` と `settings/providers.json`）から**現在使われている OpenAI 互換 API**（OpenAI / DeepSeek / OpenRouter / Groq など）を検出して `scripts/.env` に書き出します。`skill-extractor.py` は `.env` があれば読み込むので、Cline 側で DeepSeek 以外の API を設定していてもスキル自動生成が動きます。anthropic など OpenAI 互換でないプロバイダはスキップされます。
-
-### 6.3 スキルの自動生成フック（skill-extractor）
-
-`scripts/skill-extractor.py` は Cline のタスク完了フック（`.clinerules/hooks/TaskComplete`。payload の `hookName` は `agent_end` / `TaskComplete` の両対応）で起動し、セッションのトランスクリプトを **OpenAI 互換 API**（`scripts/.env` 経由で Cline の設定を使用。デフォルトは DeepSeek）で分析して、再利用可能な手順があれば `skills/` 配下に SKILL.md を自動生成・更新します。変更時は `setup_cline_skills.py --prune` を自動実行します。
-
-```bash
-python3 scripts/skill-extractor.py --self-test            # 環境診断
-python3 scripts/skill-extractor.py --no-llm --force       # LLM なしで配管確認
-python3 scripts/skill-extractor.py --force --dry-run --payload /path/to/payload.json  # 書き込みなしドライラン
-```
-
-使用する API は `scripts/.env`（存在すれば自動読込）または環境変数 `SKILL_EXTRACTOR_API_BASE` / `SKILL_EXTRACTOR_MODEL` / `SKILL_EXTRACTOR_API_KEY` で指定できます（**既存の環境変数が優先**。`.env` は読み込み専用で、書き出しは `setup_cline_skills.py` の役割です）。
-
-> **Cline のフックは 30 秒でタイムアウトする**（v4.1.16 ではハードコード）ため、フック経由（stdin ペイロード）のときは、LLM 分析をデタッチしたバックグラウンドワーカー（`--bg`）に委譲して即座に完了します（stdout には空 JSON `{}` を返す）。
->
-> **ログは2系統です。**
-> - 詳細ログ: `~/.cline/data/logs/skill-extractor/runs.log`（従来どおり。Cline の元のログ配置・形式は触らない）
-> - 簡易サマリ: `scripts/skill-extractor.log`（時刻 + スキル追加件数 + 一言メモ。独自ログとして `scripts/` 配下に書き出し。git 追跡対象外）
-
-動作の詳細・環境変数（`SKILL_EXTRACTOR_*`）は `scripts/skill-extractor.py` の docstring を参照してください。
-
-### 6.4 ルール（Instructions）の一元管理
-
-- `scripts/instructions/Instructions.md` が編集の**単一ソース**です
-- `.clinerules/rules` と `~/.hermes/SOUL.md` は `scripts/instructions/` への symlinkなので、ここを編集すれば **Cline のルールと Hermes の SOUL の両方に反映**されます
+→ **`いろいろ/ai-agent-setup-guide.md`** を参照
 
 ---
 
@@ -354,15 +290,13 @@ python3 scripts/skill-extractor.py --force --dry-run --payload /path/to/payload.
 | 症状 | 対処 |
 |---|---|
 | 「Reopen in Container」が出ない | Docker Desktop が起動しているか確認。Dev Containers 拡張が入っているか確認 |
-| 初回ビルドが数分以上かかる | 正常です。イメージのダウンロード + Hermes Agent のインストールが走るため（2 回目以降は速い） |
+| 初回ビルドが数分以上かかる | 正常です。イメージのダウンロード + ビルドが走るため（2 回目以降は速い） |
 | 古いコンテナが残って開けない | `docker rm <コンテナ名>` で削除してから開き直す |
 | PDF が生成されない | プレビューで PDF を開いたままにしない（ファイルロック）。TeX アイコン →「View LaTeX Log」でログを確認 |
 | ビルド時に `This file needs format 'pLaTeX2e'` と出る | メインファイル先頭の `% !TEX program = latexmk` を**削除**する。このマジックコメントがあると LaTeX Workshop が `latexmk ... -pdf -f` を実行して **pdflatex を強制**するため（本テンプレートは uplatex 前提。エンジンは各フォルダの `latexmkrc` が決める）。代わりに先頭に `% !TEX root = ./メインファイル名.tex` を置く |
 | 開いているファイルと違うファイルがビルドされる（複数フォルダ構成） | 各メインファイルの先頭に `% !TEX root = ./<そのファイル名>.tex` を書く（このリポジトリの全テンプレートで設定済み）。フォルダをコピーして使うときはファイル名に合わせて付け直す |
 | ビルド時にフォントの警告が出る | `header.tex` の「本文を細字に設定」ブロックをコメントアウトすると解消します |
 | Overleaf でエラーになる | コンパイラを「LaTeX」に設定し、`latexmkrc` をアップロードする |
-| コンテナ再構築後に hermes の設定が消えた | `hermes setup` を再実行する。スキルは symlink + git 管理なので失われません |
-| タスク完了時に Cline が「Hook failed」を表示する | フック実行は Cline 側で **30 秒タイムアウト**（v4.1.16 ではハードコード）。`scripts/skill-extractor.py` はバックグラウンド委譲（`--bg`）で回避済み。`scripts/skill-extractor.log`（簡易サマリ）に「時刻 + スキル追加件数 + メモ」、`~/.cline/data/logs/skill-extractor/runs.log` に詳細が記録されていれば正常動作。`[llm]` の応答が遅い場合は DeepSeek 側の混雑 |
 | 画像が表示されない | `fig/` にファイルを置き、`\includegraphics[width=...]{fig/ファイル名}` のパス・拡張子を確認 |
 | 参考文献が出ない | `\cite{キー}` のキーと `bibfile.bib` のエントリが一致しているか確認 |
 
@@ -385,19 +319,15 @@ python3 scripts/skill-extractor.py --force --dry-run --payload /path/to/payload.
 - [LaTeX Workshop（VS Code 拡張）](https://marketplace.visualstudio.com/items?itemName=James-Yu.latex-workshop)
 - [VS Code Dev Containers ドキュメント](https://code.visualstudio.com/docs/devcontainers/containers)
 
-### AI エージェント
-
-- [Hermes Agent](https://hermes-agent.nousresearch.com/) / [GitHub: NousResearch/hermes-agent](https://github.com/NousResearch/hermes-agent)
-- [ACP Client（VS Code 拡張）](https://marketplace.visualstudio.com/items?itemName=formulahendry.acp-client)
-- [Cline（VS Code 拡張）](https://marketplace.visualstudio.com/items?itemName=saoudrizwan.claude-dev)
-
 ### リポジトリ内の資料（`いろいろ/`）
 
 | ファイル | 内容 |
 |---|---|
 | `docker-latexガイド/docker-latex-guide.md` | VS Code + Docker + 卒論テンプレートの説明スライド（Marp） |
 | `README_thesis.md` | 卒論テンプレート用の旧 README（要旨の書式修正履歴つき） |
+| `ai-agent-setup-guide.md` | Cline / Hermes Agent のセットアップとスキル自動更新の解説（README 6 章からの移行先） |
 | `hermes-agent-install-notes.md` | Hermes Agent 導入の調査メモ |
+| `hermes-agent-config-guide.md` | Hermes Agent の設定ガイド |
 
 ## License
 

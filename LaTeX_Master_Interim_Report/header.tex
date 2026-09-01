@@ -1,0 +1,30 @@
+% header.tex
+
+%------------------パッケージ読み込み--------------------
+\usepackage{graphicx}
+\usepackage{amsmath,amssymb,amsthm}
+\allowdisplaybreaks
+\usepackage[subrefformat=parens,labelformat=parens]{subcaption}
+% \usepackage{tabularray} % platexと非互換
+\usepackage{url}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage[top=1.5cm, bottom=1.0cm, left=1.4cm, right=1.4cm, includefoot]{geometry}
+
+%-------------------コマンドの定義-------------------------
+\newcommand{\bm}{\boldsymbol}
+\newcommand{\del}{\partial}
+\newcommand{\diag}{\mathrm{diag}}
+
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+\newtheorem{assumption}{Assumption}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{remark}{Remark}
+
+\captionsetup[subfigure]{labelformat=simple}
+\renewcommand{\thesubfigure}{(\alph{subfigure})}
+
+\date{\number\year/\number\month/\number\day}

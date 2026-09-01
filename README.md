@@ -351,6 +351,8 @@ python3 scripts/skill-extractor.py --force --dry-run --payload /path/to/payload.
 | 初回ビルドが数分以上かかる | 正常です。イメージのダウンロード + Hermes Agent のインストールが走るため（2 回目以降は速い） |
 | 古いコンテナが残って開けない | `docker rm <コンテナ名>` で削除してから開き直す |
 | PDF が生成されない | プレビューで PDF を開いたままにしない（ファイルロック）。TeX アイコン →「View LaTeX Log」でログを確認 |
+| ビルド時に `This file needs format 'pLaTeX2e'` と出る | メインファイル先頭の `% !TEX program = latexmk` を**削除**する。このマジックコメントがあると LaTeX Workshop が `latexmk ... -pdf -f` を実行して **pdflatex を強制**するため（本テンプレートは uplatex 前提。エンジンは各フォルダの `latexmkrc` が決める）。代わりに先頭に `% !TEX root = ./メインファイル名.tex` を置く |
+| 開いているファイルと違うファイルがビルドされる（複数フォルダ構成） | 各メインファイルの先頭に `% !TEX root = ./<そのファイル名>.tex` を書く（このリポジトリの全テンプレートで設定済み）。フォルダをコピーして使うときはファイル名に合わせて付け直す |
 | ビルド時にフォントの警告が出る | `header.tex` の「本文を細字に設定」ブロックをコメントアウトすると解消します |
 | Overleaf でエラーになる | コンパイラを「LaTeX」に設定し、`latexmkrc` をアップロードする |
 | コンテナ再構築後に hermes の設定が消えた | `hermes setup` を再実行する。スキルは symlink + git 管理なので失われません |

@@ -1,0 +1,145 @@
+% !TEX root = ./interim_main.tex
+% 複数フォルダに分かれている場合、コンパイルするディレクトリがルートになる場合があるため必要
+\documentclass[uplatex,dvipdfmx,a4j,9pt]{jsarticle}
+\input{header}
+
+% ---- パッケージ群 ----------------------------------------------------------
+\usepackage{multicol}
+\usepackage{titlesec}   % 見出し余白調整
+\usepackage{tabularray} % 表組用
+\usepackage{graphicx}   % 画像挿入用
+\usepackage{caption}    % キャプション調整用
+\usepackage{float}      % 画像位置制御用
+
+% ---- この部分だけ各自で編集 ----------------------------------------------
+\newcommand{\JapaneseTitle}{研究題目を記入}
+\newcommand{\EnglishTitle}{English Title of Your Research}
+\newcommand{\ReportDate}{\today}
+\newcommand{\Presenter}{氏名を記入}
+\newcommand{\Supervisor}{指導教員名・職位を記入}
+
+% ---- 見出し余白設定 --------------------------------------------------------
+\titlespacing*{\section}{0pt}{1.5ex plus .2ex minus .2ex}{1ex plus .2ex}
+\titlespacing*{\subsection}{0pt}{1ex plus .2ex minus .2ex}{0.8ex plus .2ex}
+
+% ---- \maketitle 再定義 -----------------------------------------------------
+\makeatletter
+\def\@maketitle{%
+  \let\footnote\thanks
+  \begin{center}
+      {\huge\bfseries \JapaneseTitle\\}
+      \vspace{0.7zw}
+      {\Large\bfseries \EnglishTitle}
+  \end{center}
+  \vspace{1.5zw}
+  \hfill
+  \begin{minipage}{0.45\linewidth}
+      \raggedleft
+      \large
+      \ReportDate \\[0.8zw]
+      発表者　　\Presenter　　　　 \\[0.6zw]
+      指導教員　\Supervisor
+  \end{minipage}
+  \par\vspace{2zw}
+  \setcounter{footnote}{0}%
+  \let\thanks\relax\let\maketitle\relax
+  \gdef\@thanks{}\gdef\@author{}\gdef\@date{}\gdef\@title{}%
+}
+\makeatother
+\date{}
+
+\begin{document}
+\maketitle
+
+% 本文中の「ここに〜」を各自の研究内容に置き換えてください。
+% 不要な節・表・図は削除して構いません。
+
+\section*{研究の概要と目的}
+ここに研究の概要と目的を日本語で記入する。研究背景、解決したい課題、提案する方法、および期待される成果を簡潔にまとめる。
+
+\vspace{0.5cm}
+Write an English summary of the research here. Briefly describe the background, research objective, proposed approach, and expected outcomes.
+\vspace{1cm}
+
+\begin{multicols}{2}
+
+\section{背景・先行研究調査}
+
+\subsection{社会的背景}
+ここに研究に関連する社会的背景や実用上の課題を記入する。
+
+\subsection{学術的背景}
+ここに先行研究の動向や、未解決の学術的課題を記入する。文献を引用する場合は、\cite{reference1}のように記述する。
+
+\subsection{先行研究との位置づけ}
+先行研究と比較した本研究の位置づけ、独創性、新規性、技術的意義を記入する。
+
+\section{目的}
+本研究の目的を以下に示す：
+\begin{enumerate}
+  \item 目的1を記入する
+  \item 目的2を記入する
+  \item 目的3を記入する
+\end{enumerate}
+
+\section{計画・目標}
+
+\subsection{研究計画}
+今後の研究計画、実験計画、論文執筆などの予定を記入する。
+
+% 工程表を挿入する場合の例です。
+% \begin{minipage}{\columnwidth}
+%   \centering
+%   \includegraphics[width=\columnwidth]{schedule-file-name}
+%   \captionof{figure}{研究計画工程表}
+%   \label{fig:schedule}
+% \end{minipage}
+
+\subsection{到達目標・評価項目}
+本研究で目指す成果と、その評価項目を記入する。複数の目標がある場合は、箇条書きで整理する。
+
+\section{研究手法}
+
+\subsection{システム設計・開発}
+ここに対象システム、実験装置、開発環境などを記入する。
+
+\begin{table}[H]
+\centering
+\caption{システム構成（記入例）}
+\begin{tblr}{colspec={X[1] X[2]},width=\linewidth}
+\hline
+項目 & 内容 \\
+\hline
+項目1 & 仕様・条件などを記入 \\
+項目2 & 仕様・条件などを記入 \\
+項目3 & 仕様・条件などを記入 \\
+\hline
+\end{tblr}
+\end{table}
+
+\subsection{提案手法}
+ここに提案する手法、アルゴリズム、解析方法などを記入する。
+
+\subsection{実験・評価方法}
+評価に用いる条件、手順、比較対象、評価指標を記入する。
+
+% 図を挿入する場合は、次の例を利用してください。
+% \begin{figure}[H]
+%   \centering
+%   \includegraphics[width=\columnwidth]{figure-file-name}
+%   \caption{図の説明}
+%   \label{fig:example}
+% \end{figure}
+
+\section{まとめ}
+研究の背景、目的、計画・目標、研究手法を踏まえ、現時点での進捗と今後の展望を簡潔にまとめる。
+
+\begin{thebibliography}{99}
+\bibitem{reference1}
+著者名, ``文献タイトル,'' 誌名・会議名, 巻号, ページ, 年.
+
+% 文献を追加する場合は、上記の \bibitem を複製して編集してください。
+\end{thebibliography}
+
+\end{multicols}
+\end{document}

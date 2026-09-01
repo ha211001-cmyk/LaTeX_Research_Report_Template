@@ -5,9 +5,9 @@
 #
 # このファイルは setup_cline_skills.py が各 Hooks フォルダへコピーする。
 #   - ~/Documents/Cline/Hooks/taskcomplete.sh    (global)
-#   - /workdir/.cline/hooks/taskcomplete.sh       (project)
-# ※ symlink ではなくコピーにする理由: Cline のフック走査は fs.Dirent.isFile()
-#   で判定するため、symlink ファイルは拾われない (Node で実証済み)。
+#   - /workdir/.clinerules/hooks/TaskComplete     (project)
+# ※ コピー先ファイル名は Cline のフック名 (TaskComplete) と完全一致させる必要がある
+#   (Cline は <hooks_dir>/<HookName> を fs.stat + 実行ビットで探す)。
 #
 # scope は呼び出しパス ($0) から自動判定する。
 case "$0" in

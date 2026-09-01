@@ -11,7 +11,11 @@ Cline 用のフラット構造 (.agents/skills) の symlink を再構築する�
 
 実体はこのファイル (git 管理)。Hooks フォルダにはラッパーのみを置く。
 
-- トリガ: Cline 内部イベント agent_end (TaskComplete)。stdin に JSON ペイロードが渡る。
+- トリガ: Cline タスク完了フック。stdin に JSON ペイロードが渡る。
+  payload["hookName"] は "agent_end" (内部名) と "TaskComplete" (フック名) の両方を受け付ける。
+- Cline のフック実行は 30 秒でタイムアウトする (v4.1.16 ではハードコード) ため、
+  フック経由 (stdin ペイロード) のときは重い LLM 分析をデタッチしたバックグラウンド
+  プロセス (--bg) に委譲し、フック自体は即座に完了する。stdout には空 JSON "{}" を返す。
 - セッション情報: ~/.cline/data/db/sessions.db (SQLite)
 - トランスクリプト: ~/.cline/data/sessions/<session_id>/<session_id>.messages.json
 - LLM: DeepSeek Chat Completions (https://api.deepseek.com/v1/)。scripts/.env があれば
@@ -124,11 +128,18 @@ load_env_file(ENV_FILE)  # モジュール読み込み時点で反映 (resolve_a
 # ログ
 # ---------------------------------------------------------------------------
 class Logger:
-    """フックは detached 実行で stdout が捨てられるため、常にファイルへ書く。"""
+    """フックは detached 実行で stdout が捨てられるため、常にファイルへ書く。
 
-    def __init__(self, log_dir: Path):
+    - log():    runs.log へ追記。簡易サマリ用 (時刻 + 件数 + 一言メモ)。
+    - detail(): stdout のみ (runs.log には書かない)。詳細はバックグラウンド
+                ワーカーの bg-<session>.log 側へ流れる。
+    quiet=True (フックのフォアグラウンド) では detail は抑制される。
+    """
+
+    def __init__(self, log_dir: Path, quiet: bool = False):
         self.log_dir = log_dir
         self.runs_log = log_dir / "runs.log"
+        self.quiet = quiet
         log_dir.mkdir(parents=True, exist_ok=True)
 
     def _ts(self) -> str:
@@ -141,7 +152,13 @@ class Logger:
                 f.write(line)
         except OSError:
             pass  # ログが書けなくてもフックは壊さない
-        print(message)  # 手動実行時の可視化用 (フック時は捨てられる)
+        if not self.quiet:
+            print(message)  # 手動実行時の可視化用 (フック時は捨てられる)
+
+    def detail(self, message: str) -> None:
+        """runs.log には書かず、詳細を stdout だけに出す (bg ログ向け)。"""
+        if not self.quiet:
+            print(message)
 
 
 def mask_key(key: str) -> str:
@@ -539,6 +556,22 @@ def run_setup(skills_root: Path, dry_run: bool) -> str | None:
 # ---------------------------------------------------------------------------
 # マーカー (重複実行ガード)
 # ---------------------------------------------------------------------------
+def is_claimed(session_id: str, log_dir: Path, n_messages: int) -> bool:
+    """処理済みマーカーを読み取り専用で確認する (書き込みはしない)。
+
+    バックグラウンド委譲の前段チェック用。実際のマーカー更新は
+    ワーカー (claim_work) が行う。
+    """
+    marker = log_dir / f"{session_id}.done.json"
+    try:
+        if marker.exists():
+            prev = json.loads(marker.read_text(encoding="utf-8"))
+            return n_messages <= int(prev.get("n_messages", 0))
+    except (OSError, json.JSONDecodeError, TypeError, ValueError):
+        pass
+    return False
+
+
 def claim_work(session_id: str, log_dir: Path, n_messages: int) -> bool:
     """既に処理済みかを判定。新規メッセージが増えていれば再処理する。
 
@@ -571,13 +604,26 @@ def mark_done(session_id: str, log_dir: Path, n_messages: int, result: dict) -> 
         marker = log_dir / f"{session_id}.done.json"
         marker.write_text(
             json.dumps(
-                {**result, "ts": datetime.now(timezone.utc).isoformat(timespec="seconds")},
+                {**result, "n_messages": n_messages,
+                 "ts": datetime.now(timezone.utc).isoformat(timespec="seconds")},
                 ensure_ascii=False,
             ),
             encoding="utf-8",
         )
     except OSError as exc:
         print(f"[warn] マーカー書き込み失敗: {exc}")
+
+
+def fmt_skills(changed: list[dict], skills_root: Path) -> str:
+    """変更したスキルを 'category/name' 形式のカンマ区切りで返す。"""
+    names: list[str] = []
+    for c in changed:
+        p = Path(c.get("path", ""))
+        try:
+            names.append(str(p.parent.relative_to(skills_root)))
+        except ValueError:
+            names.append(p.parent.name or p.name)
+    return ", ".join(names)
 
 
 # ---------------------------------------------------------------------------
@@ -598,6 +644,7 @@ def parse_args() -> argparse.Namespace:
                    help="LLM を呼ばず、セッション解決とトランスクリプト抽出までで終了")
     p.add_argument("--force", action="store_true",
                    help="処理済みマーカーを無視して再実行")
+    p.add_argument("--bg", action="store_true", help=argparse.SUPPRESS)
     p.add_argument("--self-test", action="store_true",
                    help="環境診断のみ実行して終了")
     p.add_argument("--skills-root", type=Path, default=None,
@@ -626,6 +673,7 @@ def self_test() -> int:
     _check("skills root", lambda: str(DEFAULT_SKILLS_ROOT) if DEFAULT_SKILLS_ROOT.is_dir() else "NG")
     _check("setup script", lambda: str(DEFAULT_SETUP_SCRIPT) if DEFAULT_SETUP_SCRIPT.is_file() else "NG")
     _check("scripts/.env", lambda: f"{ENV_FILE} ({'読込あり' if ENV_FILE.is_file() else 'なし'})")
+    _check("log dir", lambda: f"{DEFAULT_LOG_DIR} (書き込み可)" if DEFAULT_LOG_DIR.is_dir() else f"{DEFAULT_LOG_DIR} (未作成)" )
 
     key = resolve_api_key()
     checks.append(f"  [{'OK' if key else 'FAIL'}]   API key: {mask_key(key) if key else 'NG (未設定)'}")
@@ -651,7 +699,10 @@ def main() -> int:
         return 0
 
     log_dir = Path(env_or("SKILL_EXTRACTOR_LOG_DIR", str(DEFAULT_LOG_DIR)))
-    logger = Logger(log_dir)
+    # フック経由 (stdin ペイロード) のフォアグラウンドは stdout に "{}" だけを
+    # 出して Cline に完了を伝えるため、Logger の print は抑制する。
+    quiet = args.payload is None and not args.bg
+    logger = Logger(log_dir, quiet=quiet)
 
     # ---- ペイロード取得 ----
     if args.payload:
@@ -676,12 +727,14 @@ def main() -> int:
     agent_id = payload.get("agentId")
     conv_id = payload.get("conversationId")
     parent_id = payload.get("parentAgentId")
-    logger.log(
+    logger.detail(
         f"[start] scope={scope} hook={hook_name} agentId={agent_id} "
         f"conversationId={conv_id} parentAgentId={parent_id}"
     )
 
-    if hook_name != "agent_end":
+    # Cline の hookName はバージョンによって "agent_end" (内部名) と
+    # "TaskComplete" (フック名) のどちらかで渡る。両方受け付ける。
+    if hook_name not in ("agent_end", "TaskComplete"):
         logger.log(f"[skip] 対象外のイベント: {hook_name}")
         return 0
     if parent_id:
@@ -695,7 +748,7 @@ def main() -> int:
         logger.log("[skip] セッションを解決できませんでした")
         return 0
     session_id = session.get("session_id")
-    logger.log(f"[session] {session_id} model={session.get('model')}")
+    logger.detail(f"[session] {session_id} model={session.get('model')}")
 
     sessions_dir = args.sessions_dir or SESSIONS_DIR
     messages_path = Path(session.get("messages_path") or "")
@@ -720,6 +773,47 @@ def main() -> int:
         logger.log(f"[skip] メッセージ数 {n_messages} < {min_msgs} (短すぎる)")
         return 0
 
+    # ---- バックグラウンド委譲 (フック経由のときのみ) ----
+    # Cline のフック実行は 30 秒でタイムアウトするため (v4.1.16 ではハードコード)、
+    # 重い LLM 分析はデタッチしたワーカー (--bg) に任せて、フック自体は即座に終了する。
+    # 手動実行 (--payload 指定) やワーカー自身はこの分岐に入らない。
+    if not args.bg and not args.payload:
+        if is_claimed(session_id, log_dir, n_messages):
+            logger.log("[skip] 既に処理済み (新規メッセージなし)")
+            return 0
+        try:
+            payload_file = log_dir / f"payload-{session_id}.json"
+            payload_file.write_text(
+                json.dumps(payload, ensure_ascii=False), encoding="utf-8"
+            )
+        except OSError as exc:
+            logger.log(f"[error] ペイロード保存失敗: {exc}")
+            return 0
+        bg_log = log_dir / f"bg-{session_id}.log"
+        cmd = [
+            sys.executable, str(Path(__file__).resolve()),
+            "--payload", str(payload_file),
+            "--scope", scope,
+            "--bg",
+        ]
+        try:
+            with open(bg_log, "a", encoding="utf-8") as f:
+                proc = subprocess.Popen(
+                    cmd,
+                    stdout=f, stderr=subprocess.STDOUT,
+                    stdin=subprocess.DEVNULL,
+                    start_new_session=True,
+                )
+        except OSError as exc:
+            logger.log(f"[error] バックグラウンド起動失敗: {exc}")
+            return 0
+        logger.log(f"[bg] バックグラウンド処理を開始 pid={proc.pid} (ログ: {bg_log})")
+        print("{}")  # Cline が stdout を JSON として解釈するため空 JSON を返す
+        return 0
+
+    if args.bg:
+        logger.detail(f"[bg] ワーカー開始 scope={scope} session={session_id}")
+
     # ---- 重複実行ガード ----
     if not args.force and not claim_work(session_id, log_dir, n_messages):
         logger.log("[skip] 既に処理済み (新規メッセージなし)")
@@ -735,7 +829,7 @@ def main() -> int:
     if not transcript:
         logger.log("[skip] 抽出できる内容がありません")
         return 0
-    logger.log(f"[transcript] {len(transcript)} chars, {n_messages} messages")
+    logger.detail(f"[transcript] {len(transcript)} chars, {n_messages} messages")
 
     if args.no_llm:
         logger.log("[dry] --no-llm のためここで終了 (配管は正常)")
@@ -760,7 +854,7 @@ def main() -> int:
         return 0
 
     user_content = build_user_content(session, transcript, categories, skills)
-    logger.log(f"[llm] {api_base} model={model} (キー: {mask_key(api_key)})")
+    logger.detail(f"[llm] {api_base} model={model} (キー: {mask_key(api_key)})")
 
     RETRY_HINT = (
         "\n\nIMPORTANT: your previous response was truncated or invalid JSON. "
@@ -790,16 +884,17 @@ def main() -> int:
             return 0
 
     if proposal is None:
-        logger.log(f"[error] LLM 応答を JSON として解釈できませんでした: {last_err}\n{raw[:500]}")
+        logger.log(f"[error] LLM 応答を JSON として解釈できませんでした: {last_err}")
+        logger.detail(f"[error] raw: {raw[:500]}")
         return 0
-    logger.log(f"[llm] 応答 {len(raw)} chars")
+    logger.detail(f"[llm] 応答 {len(raw)} chars")
 
     summary = proposal.get("summary", "")
     proposed = proposal.get("skills", [])
-    logger.log(f"[llm] summary: {summary} | 提案スキル数: {len(proposed)}")
+    logger.detail(f"[llm] summary: {summary} | 提案スキル数: {len(proposed)}")
 
     if not proposed:
-        logger.log("[done] 追加・更新するスキルなし")
+        logger.log("スキル追加: 0件")
         mark_done(session_id, log_dir, n_messages,
                   {"status": "no-change", "summary": summary})
         return 0
@@ -807,17 +902,17 @@ def main() -> int:
     # ---- 適用 ----
     changed = apply_changes(proposal, skills_root, args.dry_run)
     if not changed:
-        logger.log("[done] 適用可能な提案なし")
+        logger.log("スキル追加: 0件")
         return 0
 
     # ---- setup 再実行 ----
     setup_out = run_setup(skills_root, dry_run=args.dry_run)
     if setup_out:
-        logger.log(f"[setup] output tail:\n{setup_out[-1200:]}")
+        logger.detail(f"[setup] output tail:\n{setup_out[-1200:]}")
 
     mark_done(session_id, log_dir, n_messages,
               {"status": "changed", "changed": changed, "summary": summary})
-    logger.log(f"[done] スキル {len(changed)} 件を処理しました")
+    logger.log(f"スキル追加: {len(changed)}件 ({fmt_skills(changed, skills_root)}) — {summary}")
     return 0
 
 

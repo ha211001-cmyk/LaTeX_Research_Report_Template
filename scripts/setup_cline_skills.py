@@ -6,14 +6,16 @@
    Cline はスキルルート直下の 1 階層しか走査しない (再帰しない) ため、
    カテゴリ階層を外した「個別 symlink」を張る必要がある。
 
-2. **Hooks**: /workdir/scripts/taskcomplete.sh を /workdir/.cline/hooks へ**コピー**する。
-   ※ Cline のフック走査は fs.Dirent.isFile() で判定するため symlink ファイルは拾われない。
-     そのためコピー方式を採用する (Node で実証済み)。
-   ※ フックはプロジェクトの .cline に集約 (グローバル側には置かない)。
+2. **Hooks**: /workdir/scripts/taskcomplete.sh を /workdir/.clinerules/hooks/TaskComplete へ**コピー**する。
+   ※ 現在の Cline は <ws>/.clinerules/hooks からフックを探し、Unix では**フック名と完全一致するファイル名** (<HookName>。例: TaskComplete) を fs.stat + 実行ビットで検出する。symlink ファイルを拾わない実装 (fs.Dirent.isFile 判定) への耐性のためコピー方式を採用する。
+   (実証済み: ディレクトリ symlink の中身は再帰走査で拾われるが、ファイル symlink は fs.Dirent.isFile() で拾われない)
+   ※ フックはプロジェクトの .clinerules/hooks に集約 (グローバル側には置かない)。
 
-3. **Instructions**: /workdir/scripts/instructions を /workdir/.cline/rules に symlink して公開する。
-   (Cline は <ws>/.cline/rules をルール走査する。グローバル側 ~/Documents/Cline には触らない)
-   --prune 時は旧配置 (./.agents/instructions 等) の残骸を掃除する。
+3. **Instructions**: /workdir/scripts/instructions を /workdir/.clinerules/rules に symlink して公開する。
+   (Cline は <ws>/.clinerules を再帰走査して .md/.txt をルールとして読む。ディレクトリ symlink は
+   parentPath 経由で中身も拾われるため rules/ 配下のファイルがルールになる。なお
+   .clinerules/hooks・workflows・skills はルール走査から除外される。グローバル側 ~/Documents/Cline には触らない)
+   --prune 時は旧配置 (./.cline/rules, ./.agents/instructions 等) の残骸を掃除する。
 
 4. **SOUL**: ~/.hermes/SOUL.md を scripts/instructions/Instructions.md への symlink にする
    (Hermes Agent の SOUL を git 管理された Instructions.md で一元管理する)。
@@ -167,20 +169,21 @@ def prune_stale_links(target_root: Path, source: Path, dry_run: bool) -> list[st
 # Hooks (コピー方式: Cline の走査は symlink を拾わない)
 # ---------------------------------------------------------------------------
 def sync_hook_file(
-    hook_source: Path, dest_dir: Path, dry_run: bool, no_replace: bool
+    hook_source: Path, dest_dir: Path, dry_run: bool, no_replace: bool, hook_name: str
 ) -> tuple[str, str]:
-    """hook_source を dest_dir にコピーする。戻り値: (status, message)。
+    """hook_source を dest_dir/<hook_name> にコピーする。戻り値: (status, message)。
 
-    status: "copy" / "skip" / "error"
+    Cline は Unix で <hooks_dir>/<HookName> を完全一致で探す (例: TaskComplete) ため、
+    コピー先ファイル名はフック名と一致させる。status: "copy" / "skip" / "error"
     """
     if not hook_source.is_file():
         return ("error", f"hook ソースがありません: {hook_source}")
     if not dest_dir.is_dir():
         if dry_run:
-            return ("copy", f"{dest_dir / hook_source.name} (ディレクトリ作成 + コピー)")
+            return ("copy", f"{dest_dir / hook_name} (ディレクトリ作成 + コピー)")
         dest_dir.mkdir(parents=True, exist_ok=True)
 
-    dest = dest_dir / hook_source.name
+    dest = dest_dir / hook_name
     if dest.is_symlink():
         # 以前の symlink 方式からの移行。置き換えてコピーにする。
         if no_replace:
@@ -201,16 +204,18 @@ def sync_hook_file(
     return ("copy", str(dest))
 
 
-def prune_hook_files(hook_source: Path, dest_dirs: list[Path], dry_run: bool) -> list[str]:
+def prune_hook_files(
+    hook_source: Path, dest_dirs: list[Path], dry_run: bool, hook_name: str
+) -> list[str]:
     """配置済みのフックコピーを掃除する。
 
     - ソース消失時: 管理下 (dest_dirs) のコピーを削除。
-    - 管理対象から外れた既知の Cline フック配置 (他の .cline 等) に、
+    - 管理対象から外れた既知の Cline フック配置 (旧 .cline/hooks 等) に、
       当スクリプト由来のコピー (内容がソースと同一) が残っていれば削除。
       内容が異なるファイルはユーザー所有とみなし触らない。
     """
     removed: list[str] = []
-    managed = {d / hook_source.name: d for d in dest_dirs}
+    managed = {d / hook_name: d for d in dest_dirs}
 
     if not hook_source.is_file():
         for dest in managed:
@@ -223,11 +228,12 @@ def prune_hook_files(hook_source: Path, dest_dirs: list[Path], dry_run: bool) ->
     source_bytes = hook_source.read_bytes()
     # 注: ~/Documents/Cline (グローバル側) は Cline 本体が管理する場所のため対象外。
     known_dirs = [
+        Path("/workdir/.cline/hooks"),  # 旧プロジェクト配置 (v1 の .cline 方式)
         Path.home() / ".cline" / "hooks",
         Path.home() / ".clinerules" / "hooks",
     ]
     for d in known_dirs:
-        dest = d / hook_source.name
+        dest = d / hook_name
         if dest in managed:
             continue  # 現在の管理対象
         if dest.exists() and dest.is_file():
@@ -267,7 +273,7 @@ def link_instructions(
     dry_run: bool,
     no_replace: bool,
 ) -> list[tuple[str, str]]:
-    """instructions を /workdir/.cline/rules に symlink で公開する。
+    """instructions を /workdir/.clinerules/rules に symlink で公開する。
 
     戻り値: [(status, message), ...]
     """
@@ -294,21 +300,21 @@ def link_instructions(
 
 
 def prune_instructions(
-    source: Path, dry_run: bool
+    source: Path, dry_run: bool, link_dir: Path
 ) -> list[str]:
     """instructions 関連の symlink を掃除する (新配置 + 旧配置の残骸)。"""
     removed: list[str] = []
 
-    # 新配置: .cline/rules (ソース消失時のみ削除)
-    new_link = Path("/workdir/.cline/rules")
-    if new_link.is_symlink() and not source.is_dir():
-        removed.append(f"{new_link} (ソース消失)")
+    # 新配置: .clinerules/rules (ソース消失時のみ削除)
+    if link_dir.is_symlink() and not source.is_dir():
+        removed.append(f"{link_dir} (ソース消失)")
         if not dry_run:
-            new_link.unlink()
+            link_dir.unlink()
 
-    # 旧配置の残骸: .agents/instructions (~/Documents/Cline は触らない)
+    # 旧配置の残骸: .cline/rules, .agents/instructions (~/Documents/Cline は触らない)
     source_resolved = source.resolve()
     for p in (
+        Path("/workdir/.cline/rules"),
         Path("/workdir/.agents/instructions"),
     ):
         if p.is_symlink():
@@ -563,8 +569,10 @@ def parse_args() -> argparse.Namespace:
                    default=Path("/workdir/scripts/taskcomplete.sh"),
                    help="Hooks ソースファイル (git 管理)")
     p.add_argument("--hooks-dest", type=Path, nargs="+",
-                   default=[Path("/workdir/.cline/hooks")],
-                   help="Hooks コピー先ディレクトリ (.cline に集約)")
+                   default=[Path("/workdir/.clinerules/hooks")],
+                   help="Hooks コピー先ディレクトリ (.clinerules/hooks に集約)")
+    p.add_argument("--hooks-name", default="TaskComplete",
+                   help="Cline のフック名 (コピー先ファイル名。Cline は <hooks_dir>/<HookName> を探す)")
 
     # ---- Instructions セクション ----
     p.add_argument("--no-instructions", action="store_true",
@@ -573,8 +581,8 @@ def parse_args() -> argparse.Namespace:
                    default=Path("/workdir/scripts/instructions"),
                    help="instructions ディレクトリ (git 管理)")
     p.add_argument("--instructions-dir", type=Path,
-                   default=Path("/workdir/.cline/rules"),
-                   help="Cline がルールとして読む .cline 内の symlink 先")
+                   default=Path("/workdir/.clinerules/rules"),
+                   help="Cline がルールとして読む .clinerules 内の symlink 先")
 
     # ---- SOUL セクション ----
     p.add_argument("--no-soul", action="store_true",
@@ -667,7 +675,7 @@ def main() -> int:
         print(f"\n[Hooks] source: {args.hooks_source}")
         for d in args.hooks_dest:
             status, msg = sync_hook_file(
-                args.hooks_source, d, args.dry_run, args.no_replace
+                args.hooks_source, d, args.dry_run, args.no_replace, args.hooks_name
             )
             if status == "error":
                 errors.append(msg)
@@ -676,16 +684,18 @@ def main() -> int:
             elif status == "skip":
                 skipped.append(f"[hooks] {msg}")
         if args.prune:
-            for pr in prune_hook_files(args.hooks_source, args.hooks_dest, args.dry_run):
+            for pr in prune_hook_files(
+                args.hooks_source, args.hooks_dest, args.dry_run, args.hooks_name
+            ):
                 pruned.append(f"[hooks] {pr}")
 
-    # ---- セクション3: Instructions symlink (.cline/rules) ----
+    # ---- セクション3: Instructions symlink (.clinerules/rules) ----
     if not args.no_instructions:
         print(f"\n[Instructions] source: {args.instructions_source}")
         if not args.instructions_source.is_dir():
             errors.append(f"instructions ソースがありません: {args.instructions_source}")
             if args.prune:
-                for pr in prune_instructions(args.instructions_source, args.dry_run):
+                for pr in prune_instructions(args.instructions_source, args.dry_run, args.instructions_dir):
                     pruned.append(f"[instructions] {pr}")
         else:
             for status, msg in link_instructions(
@@ -701,7 +711,7 @@ def main() -> int:
                 elif status == "skip":
                     skipped.append(f"[instructions] {msg}")
             if args.prune:
-                for pr in prune_instructions(args.instructions_source, args.dry_run):
+                for pr in prune_instructions(args.instructions_source, args.dry_run, args.instructions_dir):
                     pruned.append(f"[instructions] {pr}")
 
     # ---- セクション4: SOUL symlink (~/.hermes/SOUL.md → Instructions.md) ----

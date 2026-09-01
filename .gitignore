@@ -5,6 +5,7 @@ __pycache__/
 ## Tool directories:
 .agents/
 .cline/
+.clinerules/
 
 ## API env (setup_cline_skills.py が Cline 設定から生成、API キーを含む):
 /scripts/.env

@@ -10,19 +10,23 @@
 
 ---
 
-## 1. Hermes Agent（ACP 経由で VS Code 内利用）
+## 1. クイックスタート
 
-- Dev Container のビルド時に自動インストール済み。ターミナルで `hermes` コマンドが使えます
-- VS Code の **ACP Client** 拡張から接続すると、エディタ内でタスクを依頼できます
-- 初回のみプロバイダ / モデルの設定が必要です:
+Dev Container のビルド時に自動インストール済みです。**`hermes model` でモデルを設定するだけですぐに使えます**。
 
 ```bash
-hermes setup    # セットアップウィザード（API キー等）
-hermes model    # プロバイダ / モデル選択
-hermes doctor   # 環境診断
+hermes model    # プロバイダ / モデル選択（モデルを設定すれば利用可能）
 hermes          # 対話開始
 ```
 
+詳細な設定や環境確認を行いたい場合:
+
+```bash
+hermes setup    # セットアップウィザード（API キー等）
+hermes doctor   # 環境診断
+```
+
+- VS Code の **ACP Client** 拡張から接続すると、エディタ内でタスクを依頼できます
 - 設定・履歴は `~/.hermes/` に保存されます。**コンテナ再構築で消える**ため、スキルは `/workdir/skills` への symlink で git 管理して失われないようにしています
 - ルール（Instructions）は `scripts/instructions/Instructions.md` が**単一ソース**で、`~/.hermes/SOUL.md` はそこへの symlink です。ここを編集すれば Hermes の SOUL に反映されます
 
@@ -30,7 +34,7 @@ hermes          # 対話開始
 
 | 症状 | 対処 |
 |---|---|
-| コンテナ再構築後に hermes の設定が消えた | `hermes setup` を再実行する。スキルは symlink + git 管理なので失われません |
+| コンテナ再構築後に hermes の設定が消えた | `hermes model`（または `hermes setup`）を再実行する。スキルは symlink + git 管理なので失われません |
 
 ## 3. 参考リンク
 

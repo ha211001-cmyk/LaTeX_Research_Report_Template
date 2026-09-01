@@ -1,0 +1,331 @@
+% !TEX root = ./slide_main.tex
+% 複数フォルダに分かれている場合、コンパイルするディレクトリがルートになる場合があるため必要
+%==============================================================================
+% 卒業論文・修士論文 発表用 Beamer スライドテンプレート
+%
+% コンパイル方法（このフォルダで実行）:
+%   latexmk slide_main.tex     →   slide_main.pdf が生成される
+%
+% 編集手順:
+%   1. 下の「タイトル情報」を自分のものに書き換える
+%   2. 各スライドのサンプルを参考に、自分の研究内容に置き換える
+%   3. 不要なスライドは削除、足りないスライドはコピーして増やす
+%==============================================================================
+\documentclass[uplatex,dvipdfmx,aspectratio=169]{beamer}
+% aspectratio=169 : 16:9 ワイド画面（4:3 にしたい場合は aspectratio=43 に変更）
+%
+% 配布用PDF（handout出力）にする場合:
+%   \pause を無視して 1フレーム=1ページ にまとめたPDFを生成する。
+%   → 下の行に差し替えてコンパイルする（README参照）
+%   \documentclass[uplatex,dvipdfmx,aspectratio=169,handout]{beamer}
+% 配布用・pause無視（1フレーム=1ページ）:
+% \documentclass[uplatex,dvipdfmx,aspectratio=169,handout]{beamer}
+
+\input{header}
+
+% テーマを変えたい場合はここで指定する。
+% 例: \usetheme{Madrid}, \usetheme{CambridgeUS} など
+% 注意: metropolis など XeLaTeX/LuaLaTeX 必須のテーマは uplatex では使えない
+\usetheme{Madrid}
+
+%==============================================================================
+% タイトル情報（ここだけ各自で編集）
+%==============================================================================
+\title[卒論・修論発表]{卒業論文・修士論文のタイトル}
+\subtitle{サブタイトル（任意・省略可）}
+\author{氏名を記入}
+\institute{福井大学 工学部 機械・システム工学科 機械工学コース}
+\date{\number\year 年 \number\month 月 \number\day 日}  % 例: 2026年9月1日
+% タイトルページ下部に表示する情報（指導教員など）
+\titlegraphic{%
+  {\small 指導教員：〇〇 教授}%
+}
+
+\begin{document}
+
+%==============================================================================
+% タイトルページ
+%==============================================================================
+\begin{frame}[plain]
+  \titlepage
+\end{frame}
+
+%==============================================================================
+% 目次
+%==============================================================================
+\begin{frame}{目次}
+  \tableofcontents
+  % 目次に載せたくないセクションは \section*{...} を使う（例: 参考文献・謝辞）
+\end{frame}
+
+%==============================================================================
+% はじめに（背景・目的）
+%==============================================================================
+\section{はじめに}
+
+\subsection{研究背景}
+\begin{frame}{研究背景}
+  \begin{itemize}
+    \item 研究の動機や社会的・学術的な背景を簡潔に書く
+    \item 図や表があると伝わりやすい
+    \item 参考文献を引用する場合は論文と同じように \cite{ref1} を使う
+  \end{itemize}
+  \begin{block}{背景のポイント}
+    \begin{itemize}
+      \item 「なぜこの研究をするのか」を聴衆に伝える
+      \item 1スライドに収めるのが目安
+    \end{itemize}
+  \end{block}
+\end{frame}
+
+\subsection{研究目的}
+\begin{frame}{研究目的}
+  \begin{enumerate}
+    \item \textbf{目的1}：解決したい課題を具体的に書く
+    \item \textbf{目的2}：達成したいことを定量的に書く
+    \item \textbf{目的3}：対象・範囲・条件を明示する
+  \end{enumerate}
+  \pause
+  \begin{exampleblock}{本発表の流れ}
+    背景 → 関連研究 → 提案手法 → 実験・結果 → 考察 → まとめ
+  \end{exampleblock}
+\end{frame}
+
+%==============================================================================
+% 関連研究
+%==============================================================================
+\section{関連研究}
+
+\begin{frame}{既存手法と課題}
+  \begin{columns}[t]
+    \begin{column}{0.48\linewidth}
+      \textbf{既存手法}
+      \begin{itemize}
+        \item 手法Aの長所・短所
+        \item 手法Bの長所・短所
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\linewidth}
+      \textbf{課題}
+      \begin{itemize}
+        \item 未解決の問題1
+        \item 未解決の問題2
+      \end{itemize}
+    \end{column}
+  \end{columns}
+
+  \vspace{3mm}
+  \begin{table}
+    \centering
+    \caption{既存手法との比較（記入例）}
+    \label{tab:comparison}
+    \begin{tabular}{lccc}
+      \toprule
+      & 手法A & 手法B & 提案手法 \\
+      \midrule
+      精度 & 高い & 低い & \textbf{高い} \\
+      計算コスト & 大 & 小 & \textbf{小} \\
+      実装の容易さ & 難 & 易 & \textbf{易} \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+\end{frame}
+%==============================================================================
+% 提案手法
+%==============================================================================
+\section{提案手法}
+
+\begin{frame}{提案手法の概要}
+  \begin{block}{提案手法のアイデア}
+    手法の概要を 1〜2 文で簡潔に。
+  \end{block}
+  \begin{enumerate}
+    \item ステップ1：前処理（データの説明）
+    \item ステップ2：特徴抽出（数式は次スライド参照）
+    \item ステップ3：学習・判定（アルゴリズムの説明）
+  \end{enumerate}
+  \pause
+  \begin{alertblock}{注意点}
+    既存手法との違い・新規性をここで明確に示す。
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{定式化}
+  提案手法の数式の例:
+  \begin{equation}
+    \label{eq:objective}
+    \min_{\bm{w}} \; \frac{1}{2}\|\bm{w}\|^2 + C\sum_{i=1}^{n}\xi_i
+  \end{equation}
+  \begin{itemize}
+    \item $\bm{w}$：重みベクトル
+    \item $\xi_i$：スラック変数（$i=1,\dots,n$）
+    \item $C$：正則化パラメータ
+  \end{itemize}
+  \pause
+  複数行の式は align 環境を使う:
+  \begin{align}
+    y &= f(\bm{x}) = \bm{w}^{\top}\bm{x} + b \\
+    \hat{y} &= \mathrm{sign}(y)
+  \end{align}
+\end{frame}
+
+%==============================================================================
+% 実験・結果
+%==============================================================================
+\section{実験・結果}
+
+\begin{frame}{実験条件}
+  \begin{table}
+    \centering
+    \caption{実験条件（記入例）}
+    \label{tab:condition}
+    \begin{tabular}{ll}
+      \toprule
+      項目 & 内容 \\
+      \midrule
+      データセット & 実験データ名（サンプル数） \\
+      比較手法 & 既存手法A、既存手法B \\
+      評価指標 & 精度（Accuracy）、F値 など \\
+      環境 & CPU / GPU、フレームワーク名、言語 \\
+      \bottomrule
+    \end{tabular}
+  \end{table}
+  \pause
+  実験条件は再現可能なように具体的に書く。
+\end{frame}
+
+\begin{frame}{実験結果（図）}
+  \begin{figure}
+    \centering
+    \includegraphics[width=0.55\linewidth]{fig/fig_1.png}
+    \caption{実験結果の例（fig/fig\_1.png）}
+    % 注意: 本文中のアンダースコアは \_ と書くこと（fig_1.png と書くとエラー）
+    \label{fig:result1}
+  \end{figure}
+\end{frame}
+
+\begin{frame}{実験結果（比較）}
+  \begin{columns}[c]
+    \begin{column}{0.48\linewidth}
+      \begin{figure}
+        \centering
+        \includegraphics[width=\linewidth]{fig/fig_1.png}
+        \caption{既存手法}
+        \label{fig:result2-a}
+      \end{figure}
+    \end{column}
+    \begin{column}{0.48\linewidth}
+      \begin{figure}
+        \centering
+        \includegraphics[width=\linewidth]{fig/fig_2.png}
+        \caption{提案手法}
+        \label{fig:result2-b}
+      \end{figure}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+% subcaption パッケージを使った複数図の例（使う場合はコメントを外す）:
+% \begin{frame}{実験結果（subcaption の例）}
+%   \begin{figure}
+%     \centering
+%     \begin{subfigure}{0.48\linewidth}
+%       \centering\includegraphics[width=\linewidth]{fig/fig_1.png}
+%       \subcaption{既存手法}\label{fig:result3-a}
+%     \end{subfigure}
+%     \hfill
+%     \begin{subfigure}{0.48\linewidth}
+%       \centering\includegraphics[width=\linewidth]{fig/fig_2.png}
+%       \subcaption{提案手法}\label{fig:result3-b}
+%     \end{subfigure}
+%     \caption{結果の比較}\label{fig:result3}
+%   \end{figure}
+% \end{frame}
+
+%==============================================================================
+% 実験・結果（動画）
+%==============================================================================
+% 動画はあきらめたほうがよい
+% \begin{frame}{実験結果（動画）}
+%   \begin{center}
+%     \includemedia[
+%       width=0.55\linewidth,
+%       height=0.31\linewidth,
+%       activate=onclick,
+%       flashvars={autoplay=true}
+%     ]{\fcolorbox{black}{black}{\color{white}\Large\bfseries ▶ クリックして動画を再生}}%
+%     {movie/soft_material_recognition.mp4}
+%   \end{center}
+%   \begin{center}
+%     {\small 実験の様子（クリックで再生。Adobe Acrobat / Acrobat Reader が必要）}
+%   \end{center}
+% \end{frame}
+
+%==============================================================================
+% 考察・まとめ
+%==============================================================================
+\section{考察とまとめ}
+
+\begin{frame}{考察}
+  \begin{itemize}
+    \item 結果から言えることを述べる
+    \item 既存手法と比較してどう優れているか / 劣っているか
+    \item 結果が期待通りでなかった場合はその理由を考察する
+  \end{itemize}
+  \pause
+  \begin{alertblock}{注意}
+    事実（結果）と意見（考察）を明確に区別して話すこと。
+  \end{alertblock}
+\end{frame}
+
+\begin{frame}{まとめと今後の課題}
+  \begin{columns}[t]
+    \begin{column}{0.48\linewidth}
+      \textbf{まとめ}
+      \begin{itemize}
+        \item 目的に対して何が達成できたか
+        \item 成果の要点を3つ程度に絞る
+      \end{itemize}
+    \end{column}
+    \begin{column}{0.48\linewidth}
+      \textbf{今後の課題}
+      \begin{itemize}
+        \item 残っている課題1
+        \item 課題2（改善の見通し）
+      \end{itemize}
+    \end{column}
+  \end{columns}
+\end{frame}
+
+%==============================================================================
+% 参考文献（目次に載せない場合: \section* を使う）
+% 注意: \section* でもセクション区切りページは挿入される。
+% 目次に載せて区切りページも見せたい場合は \section{参考文献} にする。
+%==============================================================================
+\section*{参考文献}
+\begin{frame}{参考文献}
+  \begin{thebibliography}{99}
+    \bibitem{ref1}
+      著者名, ``論文タイトル,'' 学会名・ジャーナル名, 巻, 号, pp.xx-xx, 年.
+    \bibitem{ref2}
+      著者名, ``論文タイトル,'' 学会名・ジャーナル名, 巻, 号, pp.xx-xx, 年.
+  \end{thebibliography}
+  % bibtex を使う場合は、上記の代わりに
+  % \bibliographystyle{ssice}
+  % \bibliography{bibfile}
+  % と書いて bibfile.bib を用意する（他テンプレートと同様）。
+\end{frame}
+
+%==============================================================================
+% 謝辞・おわり
+%==============================================================================
+\begin{frame}[plain]
+  \centering
+  \vspace{2cm}
+  {\Huge\bfseries ご清聴ありがとうございました}\\[1.5em]
+  {\Large 質疑応答をお願いします}\\[3cm]
+  {\small 連絡先や謝辞が必要ならここに書く}
+\end{frame}
+
+\end{document}
+

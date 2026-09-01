@@ -1,0 +1,73 @@
+%==============================================================================
+% 卒論・修論発表用 Beamer スライドテンプレート - ヘッダーファイル
+%
+% このファイルにはスライドで使用する各種設定が含まれています。
+% slide_main.tex から \input{header} で読み込まれます。
+% テーマはデフォルト（\usetheme の指定なし）です。
+% テーマを変えたい場合は slide_main.tex で \usetheme{...} を指定してください。
+%==============================================================================
+
+%------------------ 日本語フォント設定 ----------------------------------------
+% 和文をゴシック体（サンセリフ）に統一する。
+% Beamer は欧文がサンセリフ体のため、和文もゴシックに合わせると見た目が揃う。
+\renewcommand{\kanjifamilydefault}{\gtdefault}
+
+%------------------ ハイパーリンク ---------------------------------------------
+% PDF のしおり（ブックマーク）を日本語対応にする（uplatex + dvipdfmx 用）。
+% beamer は内部で hyperref を読み込むため、\documentclass の直後に読み込む。
+\usepackage{pxjahyper}
+
+%------------------ 数式 --------------------------------------------------------
+% beamer は amsmath, amssymb を自動で読み込むため、追加は不要。
+% （必要なら以下をコメントアウト解除して追加する）
+% \usepackage{mathtools}   % \coloneqq など高度な数式マクロ
+
+%------------------ 画像・表 ----------------------------------------------------
+\usepackage{graphicx}    % 画像挿入（\includegraphics）
+\usepackage{booktabs}    % 表の罫線（\toprule / \midrule / \bottomrule）
+\usepackage{subcaption}  % 複数図を (a), (b) 形式でまとめる（fig:xx-a 等）
+
+%------------------ 動画 --------------------------------------------------------
+% 動画を PDF に埋め込む機能は「使用不可」。
+% 理由: media9 は Flash Player（終了済み）ベースのため実質再生できないうえ、
+%       PDF が約13MBに肥大化する。
+% \usepackage{media9} はコメントアウト済み（下の行）。
+% どうしても使う場合は slide_main.tex の動画スライド（コメントアウト中）も有効化する。
+% \usepackage{media9} % Flash Player死亡のため使用不可
+% 使用例:
+%   \includemedia[width=0.55\linewidth,height=0.31\linewidth,activate=onclick,
+%                 flashvars={autoplay=true}]{ポスター画像}{movie/動画ファイル.mp4}
+% 注意: multimedia パッケージの \movie は dvipdfmx と非互換のため使用しないこと
+
+%------------------ 定理環境 ----------------------------------------------------
+% beamer には block / alertblock / exampleblock と、
+% theorem, lemma, corollary, definition, example, proof が標準で用意されている。
+% （スライドでは \begin{block}{タイトル} を主に使うとよい。
+%   タイトルは日本語で指定できるので \newtheorem は定義していない。）
+
+%------------------ よく使う数式コマンド ---------------------------------------
+\newcommand{\bm}{\boldsymbol}       % 太字ベクトル: \bm{x}
+\newcommand{\del}{\partial}         % 偏微分: \del
+\newcommand{\diag}{\mathrm{diag}}   % 対角行列: \diag
+
+%------------------ フッター（ページ番号） --------------------------------------
+% 右下のナビゲーション記号（ゴミのようなアイコン）を非表示
+\setbeamertemplate{navigation symbols}{}
+% フッター: 右下に「ページ番号 / 総ページ数」を表示
+% （タイトルページや [plain] 指定のフレームには表示されない）
+\setbeamertemplate{footline}{%
+  \hbox{%
+    \begin{beamercolorbox}[wd=\paperwidth,ht=2.5ex,dp=1.125ex]{}%
+      \hfill\insertframenumber\,/\,\inserttotalframenumber\hspace{2mm}%
+    \end{beamercolorbox}%
+  }%
+}
+
+%------------------ セクションページ -------------------------------------------
+% 各セクションの開始時に、セクションタイトルのスライドを自動挿入する
+% 注意: \section*{...} でも発火する（目次には載らないが区切りページは挿入される）
+\AtBeginSection{%
+  \begin{frame}[plain]
+    \sectionpage
+  \end{frame}%
+}

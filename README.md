@@ -1,4 +1,4 @@
-# 研究報告会用 LaTeX テンプレート集
+# 研究室用 LaTeX テンプレート集 with Cline / Hermes Agent on VS Code + Docker
 
 このリポジトリは、**研究報告書・卒業論文（本旨）・卒業論文要旨の 3 種類の LaTeX テンプレート**と、環境構築が不要な **VS Code + Docker 開発環境**、さらに **AI エージェント（Hermes Agent / Cline）連携** をまとめたものです。
 

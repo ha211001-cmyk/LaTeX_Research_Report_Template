@@ -27,7 +27,7 @@
 	"workspaceFolder": "/workdir",
 	"postStartCommand": "git config --global --add safe.directory ${containerWorkspaceFolder}",
 	// Hermes のスキルを git 管理するため、~/.hermes/skills を /workdir/skills へ symlink する (冪等)
-	"postCreateCommand": "bash .devcontainer/setup-skills.sh"
+	"postCreateCommand": "bash ${containerWorkspaceFolder}/.devcontainer/setup-skills.sh ${containerWorkspaceFolder}"
 
 	// Features to add to the dev container. More info: https://containers.dev/features.
 	// "features": {},
